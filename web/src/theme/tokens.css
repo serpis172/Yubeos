@@ -1,0 +1,60 @@
+/* Design tokens (docs/modules/appearance.md). Components use ONLY var(--y-*). Raw colours live here and nowhere else. */
+:root,
+:root[data-theme="yubeos-blue"] {
+  color-scheme: dark;
+  --y-bg: #0f1318;
+  --y-surface-1: #161b22;
+  --y-surface-2: #1d242d;
+  --y-border: #2a3340;
+  --y-text: #e6edf3;
+  --y-text-muted: #8b98a9;
+  --y-accent: #0095d5;
+  --y-accent-contrast: #ffffff;
+  --y-success: #3fb950;
+  --y-warning: #d29922;
+  --y-danger: #f85149;
+  --y-info: #58a6ff;
+  --y-overlay: rgb(0 0 0 / 0.45);
+
+  --y-font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --y-font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
+  --y-font-display: "Space Grotesk", var(--y-font-ui);
+  --y-font-size: 14px;
+  --y-line-height: 1.5;
+  --y-radius: 8px;
+  --y-sidebar-width: 248px;
+  --y-topbar-height: 56px;
+}
+
+:root[data-theme="yubeos-light"] {
+  color-scheme: light;
+  --y-bg: #f4f6f9;
+  --y-surface-1: #ffffff;
+  --y-surface-2: #eef1f5;
+  --y-border: #d5dbe3;
+  --y-text: #1b2430;
+  --y-text-muted: #5b6878;
+  --y-accent: #0078b0;
+  --y-accent-contrast: #ffffff;
+  --y-success: #1a7f37;
+  --y-warning: #9a6700;
+  --y-danger: #cf222e;
+  --y-info: #0969da;
+  --y-overlay: rgb(0 0 0 / 0.25);
+}
+
+:root[data-theme="yubeos-midnight"] {
+  color-scheme: dark;
+  --y-bg: #06080f;
+  --y-surface-1: #0d1220;
+  --y-surface-2: #141b2e;
+  --y-border: #1f2942;
+  --y-text: #e8ecf7;
+  --y-text-muted: #8590ad;
+  --y-accent: #00d4ff;
+  --y-accent-contrast: #04141a;
+  --y-success: #00f5a0;
+  --y-warning: #ffb703;
+  --y-danger: #ff4d6d;
+  --y-info: #a855f7;
+}

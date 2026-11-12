@@ -1,0 +1,118 @@
+openapi: 3.1.0
+info:
+  title: Yubeos API
+  version: 0.1.0
+  description: |
+    Source of truth for the Yubeos HTTP contract. Phase 0 contains the foundation endpoints;
+    every later phase adds its paths here BEFORE implementation (see docs/ROADMAP.md).
+    Conventions: docs/API.md.
+  license: { name: Apache-2.0, identifier: Apache-2.0 }
+servers:
+  - url: https://{host}/api/v1
+    variables: { host: { default: localhost:8443 } }
+security:
+  - sessionCookie: []
+tags:
+  - { name: system }
+  - { name: auth }
+  - { name: jobs }
+paths:
+  /healthz:
+    get:
+      tags: [system]
+      summary: Liveness probe
+      security: []
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, required: [ok], properties: { ok: { type: boolean } } } } } }
+  /system/info:
+    get:
+      tags: [system]
+      summary: Host information, tool versions and detected capabilities
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SystemInfo" } } } }
+        "401": { $ref: "#/components/responses/Problem" }
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Authenticate with a Linux account (PAM)
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/LoginRequest" } } }
+      responses:
+        "200": { description: Session created (cookie set), content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } } }
+        "202": { description: Second factor required, content: { application/json: { schema: { type: object, required: [needs2fa], properties: { needs2fa: { type: boolean } } } } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Current user, role and CSRF token
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } } }
+        "401": { $ref: "#/components/responses/Problem" }
+  /jobs/{id}:
+    get:
+      tags: [jobs]
+      summary: Job status
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Job" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    sessionCookie: { type: apiKey, in: cookie, name: __Host-yubeos_session, description: Browser sessions also require the X-Yubeos-CSRF header on non-GET requests. }
+    bearerToken: { type: http, scheme: bearer, description: "API token (yb_...)" }
+  responses:
+    Problem:
+      description: RFC 9457 problem details
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        errors: { type: array, items: { type: object, required: [pointer, message], properties: { pointer: { type: string }, message: { type: string } } } }
+    LoginRequest:
+      type: object
+      required: [username, password]
+      additionalProperties: false
+      properties:
+        username: { type: string, maxLength: 64 }
+        password: { type: string, maxLength: 1024 }
+        totp: { type: string, pattern: "^[0-9]{6}$" }
+    Me:
+      type: object
+      required: [username, role, csrf]
+      properties:
+        username: { type: string }
+        role: { type: string, enum: [admin, user] }
+        csrf: { type: string }
+        totpEnabled: { type: boolean }
+    SystemInfo:
+      type: object
+      required: [hostname, version, demoMode, capabilities]
+      properties:
+        hostname: { type: string }
+        version: { type: string }
+        demoMode: { type: boolean }
+        uptimeSeconds: { type: integer }
+        os: { type: object, properties: { name: { type: string }, version: { type: string }, kernel: { type: string } } }
+        versions: { type: object, additionalProperties: { type: string }, description: "zfs, smartctl, samba, docker, compose, nvidia-smi ..." }
+        capabilities: { type: object, additionalProperties: { type: boolean } }
+    Job:
+      type: object
+      required: [id, kind, state]
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        state: { type: string, enum: [queued, running, succeeded, failed, cancelled] }
+        progress: { type: number, minimum: 0, maximum: 1 }
+        message: { type: string }
+        createdAt: { type: string, format: date-time }
+        finishedAt: { type: [string, "null"], format: date-time }

@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yubeos.dev/schemas/theme.schema.json",
+  "title": "Yubeos theme",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "base", "colors", "typography"],
+  "$defs": {
+    "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$" },
+    "fontFamily": { "type": "string", "minLength": 1, "maxLength": 120, "pattern": "^[A-Za-z0-9 ,'\"_.-]+$" }
+  },
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,47}$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "author": { "type": "string", "maxLength": 80 },
+    "base": { "enum": ["dark", "light"] },
+    "colors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bg", "surface1", "surface2", "border", "text", "textMuted", "accent", "accentContrast", "success", "warning", "danger", "info", "chart"],
+      "properties": {
+        "bg": { "$ref": "#/$defs/color" },
+        "surface1": { "$ref": "#/$defs/color" },
+        "surface2": { "$ref": "#/$defs/color" },
+        "border": { "$ref": "#/$defs/color" },
+        "text": { "$ref": "#/$defs/color" },
+        "textMuted": { "$ref": "#/$defs/color" },
+        "accent": { "$ref": "#/$defs/color" },
+        "accentContrast": { "$ref": "#/$defs/color" },
+        "success": { "$ref": "#/$defs/color" },
+        "warning": { "$ref": "#/$defs/color" },
+        "danger": { "$ref": "#/$defs/color" },
+        "info": { "$ref": "#/$defs/color" },
+        "chart": { "type": "array", "minItems": 8, "maxItems": 8, "items": { "$ref": "#/$defs/color" } },
+        "terminal": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "background": { "$ref": "#/$defs/color" },
+            "foreground": { "$ref": "#/$defs/color" },
+            "cursor": { "$ref": "#/$defs/color" },
+            "selection": { "$ref": "#/$defs/color" },
+            "ansi": { "type": "array", "minItems": 16, "maxItems": 16, "items": { "$ref": "#/$defs/color" } }
+          }
+        }
+      }
+    },
+    "typography": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ui", "mono"],
+      "properties": {
+        "ui": { "$ref": "#/$defs/fontFamily" },
+        "mono": { "$ref": "#/$defs/fontFamily" },
+        "display": { "$ref": "#/$defs/fontFamily" },
+        "baseSizePx": { "type": "number", "minimum": 12, "maximum": 18, "default": 14 },
+        "lineHeight": { "type": "number", "minimum": 1.2, "maximum": 2.0, "default": 1.5 },
+        "headingWeight": { "type": "integer", "minimum": 400, "maximum": 800, "default": 600 }
+      }
+    },
+    "shape": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radiusPx": { "type": "number", "minimum": 0, "maximum": 16, "default": 8 },
+        "density": { "enum": ["compact", "comfortable", "spacious"], "default": "comfortable" },
+        "elevation": { "enum": ["flat", "soft", "outlined"], "default": "soft" }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sidebarPosition": { "enum": ["left", "right"], "default": "left" },
+        "sidebarWidthPx": { "type": "integer", "minimum": 200, "maximum": 320, "default": 248 },
+        "sidebarCollapsed": { "type": "boolean", "default": false },
+        "contentMaxWidthPx": { "type": "integer", "minimum": 960, "maximum": 2560, "default": 1600 }
+      }
+    },
+    "motion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "animations": { "enum": ["auto", "on", "off"], "default": "auto" } }
+    },
+    "background": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": { "enum": ["none", "solid", "gradient", "image", "generative"] },
+        "color": { "$ref": "#/$defs/color" },
+        "gradient": {
+          "type": "object", "additionalProperties": false, "required": ["from", "to"],
+          "properties": { "from": { "$ref": "#/$defs/color" }, "to": { "$ref": "#/$defs/color" }, "angleDeg": { "type": "integer", "minimum": 0, "maximum": 360 } }
+        },
+        "imageId": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{6,64}$" },
+        "generative": {
+          "type": "object", "additionalProperties": false,
+          "properties": { "seed": { "type": "integer", "minimum": 0, "maximum": 4294967295 }, "intensity": { "type": "number", "minimum": 0, "maximum": 1 } }
+        },
+        "dimPercent": { "type": "integer", "minimum": 0, "maximum": 90 }
+      }
+    }
+  }
+}

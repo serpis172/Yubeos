@@ -1,0 +1,23 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: { label: What happened, description: Expected vs actual behaviour }
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes: { label: Steps to reproduce }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Yubeos version, description: Output of `yubeosd --version` }
+  - type: input
+    id: os
+    attributes: { label: OS / kernel / ZFS version }
+  - type: textarea
+    id: logs
+    attributes: { label: Relevant logs, description: "`journalctl -u yubeosd -u yubeos-priv` (remove secrets)", render: shell }
+  - type: markdown
+    attributes: { value: "Security problems: do NOT open an issue — see docs/SECURITY.md §10." }

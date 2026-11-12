@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yubeos.dev/schemas/config.schema.json",
+  "title": "Yubeos /etc/yubeos/config.yaml",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "server": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "listen": { "type": "string", "default": ":443" },
+        "httpRedirect": { "type": "string", "default": ":80" },
+        "allowedHosts": { "type": "array", "items": { "type": "string" } },
+        "tls": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "mode": { "enum": ["selfsigned", "files", "acme"], "default": "selfsigned" },
+            "certFile": { "type": "string" }, "keyFile": { "type": "string" }
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "adminGroup": { "type": "string", "default": "yubeos-admin" },
+        "userGroup": { "type": "string", "default": "yubeos-user" },
+        "allowRoot": { "type": "boolean", "default": false },
+        "sessionIdleMinutes": { "type": "integer", "minimum": 5, "maximum": 1440, "default": 30 },
+        "sessionMaxHours": { "type": "integer", "minimum": 1, "maximum": 168, "default": 12 },
+        "require2faForAdmins": { "type": "boolean", "default": false }
+      }
+    },
+    "providers": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "storage": { "enum": ["auto", "zfs", "plain", "mock"], "default": "auto" },
+        "gpu": { "enum": ["auto", "nvidia", "amd", "none", "mock"], "default": "auto" },
+        "power": { "enum": ["auto", "rapl", "none", "mock"], "default": "auto" }
+      }
+    },
+    "files": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "roots": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^/" }, "default": ["/mnt"] },
+        "followSymlinks": { "type": "boolean", "default": false }
+      }
+    },
+    "terminal": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "allowUsers": { "type": "boolean", "default": false },
+        "shell": { "type": "string" },
+        "maxSessionsPerUser": { "type": "integer", "minimum": 1, "maximum": 50, "default": 5 },
+        "idleTimeoutMinutes": { "type": "integer", "minimum": 0, "default": 0 },
+        "detachedTtlMinutes": { "type": "integer", "minimum": 1, "default": 30 },
+        "recordSessions": { "type": "boolean", "default": false }
+      }
+    },
+    "addons": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "portRange": { "type": "string", "pattern": "^[0-9]{4,5}-[0-9]{4,5}$", "default": "20000-29999" },
+        "catalogs": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": false, "required": ["id", "url"],
+            "properties": { "id": { "type": "string" }, "url": { "type": "string" }, "verify": { "type": "boolean", "default": true } } }
+        }
+      }
+    },
+    "repopapers": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "githubTokenFile": { "type": "string" },
+        "sources": { "type": "array", "items": { "enum": ["github", "arxiv", "semanticscholar", "huggingface", "openalex"] } }
+      }
+    },
+    "logging": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "level": { "enum": ["debug", "info", "warn", "error"], "default": "info" }, "format": { "enum": ["json", "text"], "default": "json" } }
+    }
+  }
+}

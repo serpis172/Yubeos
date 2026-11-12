@@ -1,0 +1,7 @@
+# Replace @OWNER with the GitHub user/team. Privileged code requires two approvals (see docs/engineering/CODE-REVIEW.md §7).
+*                         @OWNER
+/internal/privd/          @OWNER
+/internal/priv/           @OWNER
+/cmd/yubeos-priv/         @OWNER
+/packaging/               @OWNER
+/docs/SECURITY.md         @OWNER

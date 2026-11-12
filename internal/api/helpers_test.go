@@ -1,0 +1,5 @@
+package api
+
+import "os"
+
+func writeFile(path, data string) error { return os.WriteFile(path, []byte(data), 0o600) }

@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes: { label: Problem to solve }
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes: { label: Proposed solution }
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options: [Dashboard, File Explorer, Disk Manager, Terminal, Add-ons, Repo-Papers, Appearance, Core/Security, Packaging, Docs]
+    validations: { required: true }

@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.24", cache: true }
+      - name: gofmt
+        run: test -z "$(gofmt -l cmd internal web)"
+      - run: go vet ./cmd/... ./internal/... ./web
+      - run: go test -race -count=1 ./cmd/... ./internal/... ./web
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./cmd/... ./internal/... ./web
+      - name: build (static)
+        run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/yubeosd
+
+  web:
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: generated API client is up to date
+        run: |
+          npm run gen
+          git diff --exit-code src/lib/api.gen.ts
+      - run: npm audit --audit-level=high --omit=dev
+
+  contracts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install jsonschema pyyaml
+      - run: python3 scripts/validate-schemas.py
+
+  docs:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: markdown link check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --no-progress --include-fragments "**/*.md"
+          fail: true

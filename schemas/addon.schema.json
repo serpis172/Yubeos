@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yubeos.dev/schemas/addon.schema.json",
+  "title": "Yubeos add-on manifest (addon.yaml, as JSON)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "yubeos.dev/v1" },
+    "kind": { "const": "Addon" },
+    "metadata": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "version", "description"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,39}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+([-+][0-9A-Za-z.-]+)?$" },
+        "description": { "type": "string", "maxLength": 300 },
+        "icon": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+\\.(svg|png)$" },
+        "categories": { "type": "array", "maxItems": 5, "items": { "type": "string", "pattern": "^[a-z0-9-]+$" } },
+        "author": { "type": "string", "maxLength": 80 },
+        "license": { "type": "string", "maxLength": 40 },
+        "homepage": { "type": "string", "format": "uri", "pattern": "^https://" }
+      }
+    },
+    "spec": {
+      "type": "object", "additionalProperties": false,
+      "required": ["runtime", "compose"],
+      "properties": {
+        "runtime": { "enum": ["compose"] },
+        "compose": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+\\.ya?ml$", "description": "File name inside the add-on directory; no path separators." },
+        "ui": {
+          "type": "object", "additionalProperties": false, "required": ["service", "port"],
+          "properties": {
+            "service": { "type": "string", "pattern": "^[a-zA-Z0-9_-]+$" },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "path": { "type": "string", "pattern": "^/[A-Za-z0-9/_.-]*$", "default": "/" },
+            "embed": { "enum": ["iframe", "link", "none"], "default": "link" },
+            "sidebar": { "type": "boolean", "default": true }
+          }
+        },
+        "storage": {
+          "type": "array", "maxItems": 16,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["name", "mount", "kind"],
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "mount": { "type": "string", "pattern": "^/[A-Za-z0-9/_.-]*$" },
+              "kind": { "enum": ["appdata", "dataset"] },
+              "access": { "enum": ["ro", "rw"], "default": "rw" },
+              "required": { "type": "boolean", "default": true }
+            }
+          }
+        },
+        "network": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "expose": { "enum": ["local", "lan"], "default": "lan" },
+            "ports": {
+              "type": "array", "maxItems": 16,
+              "items": {
+                "type": "object", "additionalProperties": false, "required": ["container"],
+                "properties": {
+                  "container": { "type": "integer", "minimum": 1, "maximum": 65535 },
+                  "host": { "oneOf": [ { "const": "auto" }, { "type": "integer", "minimum": 1024, "maximum": 65535 } ], "default": "auto" },
+                  "proto": { "enum": ["tcp", "udp"], "default": "tcp" }
+                }
+              }
+            }
+          }
+        },
+        "resources": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "gpu": { "enum": ["none", "optional", "required"], "default": "none" },
+            "memoryLimit": { "type": "string", "pattern": "^[0-9]+[mMgG]$" },
+            "cpus": { "type": "number", "minimum": 0.1, "maximum": 256 }
+          }
+        },
+        "permissions": {
+          "type": "object", "additionalProperties": false,
+          "description": "Anything true/non-empty here requires explicit admin approval at install time.",
+          "properties": {
+            "privileged": { "type": "boolean", "default": false },
+            "dockerSocket": { "type": "boolean", "default": false },
+            "hostNetwork": { "type": "boolean", "default": false },
+            "devices": { "type": "array", "maxItems": 8, "items": { "type": "string", "pattern": "^/dev/[A-Za-z0-9/_.-]+$" } },
+            "capAdd": { "type": "array", "maxItems": 8, "items": { "type": "string", "pattern": "^[A-Z_]+$" } }
+          }
+        },
+        "config": {
+          "type": "array", "maxItems": 64,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["key", "type"],
+            "properties": {
+              "key": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+              "type": { "enum": ["string", "int", "bool", "enum", "url", "secret"] },
+              "label": { "type": "string", "maxLength": 80 },
+              "default": {},
+              "required": { "type": "boolean", "default": false },
+              "options": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "healthcheck": {
+          "type": "object", "additionalProperties": false, "required": ["service"],
+          "properties": {
+            "service": { "type": "string", "pattern": "^[a-zA-Z0-9_-]+$" },
+            "path": { "type": "string", "pattern": "^/[A-Za-z0-9/_.?=&-]*$" },
+            "intervalSeconds": { "type": "integer", "minimum": 5, "maximum": 600, "default": 30 }
+          }
+        }
+      }
+    }
+  }
+}

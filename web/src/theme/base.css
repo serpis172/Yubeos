@@ -1,0 +1,17 @@
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--y-bg);
+  color: var(--y-text);
+  font-family: var(--y-font-ui);
+  font-size: var(--y-font-size);
+  line-height: var(--y-line-height);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--y-accent); text-decoration: none; }
+code, kbd, pre { font-family: var(--y-font-mono); }
+:focus-visible { outline: 2px solid var(--y-accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
