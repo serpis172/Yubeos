@@ -1,0 +1,21 @@
+# build output
+/dist/
+/web/dist/*
+!/web/dist/.gitkeep
+node_modules/
+coverage/
+*.test
+*.out
+
+# local state / secrets
+*.pem
+*.key
+.env
+.env.*
+/tmp/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
