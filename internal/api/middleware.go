@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OWNER/yubeos/internal/problem"
+	"github.com/serpis172/Yubeos/internal/problem"
 )
 
 type ctxKey int

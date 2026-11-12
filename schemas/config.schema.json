@@ -6,80 +6,350 @@
   "additionalProperties": false,
   "properties": {
     "server": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "listen": { "type": "string", "default": ":443" },
-        "httpRedirect": { "type": "string", "default": ":80" },
-        "allowedHosts": { "type": "array", "items": { "type": "string" } },
-        "tls": {
-          "type": "object", "additionalProperties": false,
-          "properties": {
-            "mode": { "enum": ["selfsigned", "files", "acme"], "default": "selfsigned" },
-            "certFile": { "type": "string" }, "keyFile": { "type": "string" }
+        "listen": {
+          "type": "string",
+          "default": ":443"
+        },
+        "httpRedirect": {
+          "type": "string",
+          "default": ":80"
+        },
+        "allowedHosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
+        },
+        "tls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": [
+                "selfsigned",
+                "files",
+                "acme"
+              ],
+              "default": "selfsigned"
+            },
+            "certFile": {
+              "type": "string"
+            },
+            "keyFile": {
+              "type": "string"
+            },
+            "acmeDomains": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "acmeEmail": {
+              "type": "string"
+            }
+          }
+        },
+        "exposure": {
+          "enum": [
+            "lan",
+            "remote"
+          ],
+          "default": "lan",
+          "description": "remote = reachable from the internet; enforces hard safety rules (docs/REMOTE-ACCESS.md)."
+        },
+        "behindProxy": {
+          "type": "boolean",
+          "default": false
+        },
+        "trustedProxies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "IPs/CIDRs allowed to set X-Forwarded-For; required when behindProxy=true."
+        },
+        "treatOverlayAsLocal": {
+          "type": "boolean",
+          "default": true
         }
       }
     },
     "auth": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "adminGroup": { "type": "string", "default": "yubeos-admin" },
-        "userGroup": { "type": "string", "default": "yubeos-user" },
-        "allowRoot": { "type": "boolean", "default": false },
-        "sessionIdleMinutes": { "type": "integer", "minimum": 5, "maximum": 1440, "default": 30 },
-        "sessionMaxHours": { "type": "integer", "minimum": 1, "maximum": 168, "default": 12 },
-        "require2faForAdmins": { "type": "boolean", "default": false }
+        "adminGroup": {
+          "type": "string",
+          "default": "yubeos-admin"
+        },
+        "userGroup": {
+          "type": "string",
+          "default": "yubeos-user"
+        },
+        "allowRoot": {
+          "type": "boolean",
+          "default": false
+        },
+        "sessionIdleMinutes": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 1440,
+          "default": 30
+        },
+        "sessionMaxHours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 12
+        },
+        "mode": {
+          "enum": [
+            "native",
+            "pam"
+          ],
+          "default": "native"
+        },
+        "require2fa": {
+          "enum": [
+            "none",
+            "admins",
+            "all"
+          ],
+          "default": "admins",
+          "description": "Must be 'all' when server.exposure=remote."
+        },
+        "trustedDeviceDays": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 90,
+          "default": 30,
+          "description": "0 disables 'remember this device'."
+        },
+        "allowPasskeyAsSoleFactor": {
+          "type": "boolean",
+          "default": true
+        },
+        "lockoutThreshold": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 100,
+          "default": 10
+        },
+        "lockoutMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440,
+          "default": 15
+        },
+        "remoteIdleMinutes": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 1440,
+          "default": 15
+        },
+        "adminRemoteTrustedDeviceDays": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 90,
+          "default": 14
+        },
+        "breachCheck": {
+          "type": "boolean",
+          "default": false
+        }
       }
     },
     "providers": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "storage": { "enum": ["auto", "zfs", "plain", "mock"], "default": "auto" },
-        "gpu": { "enum": ["auto", "nvidia", "amd", "none", "mock"], "default": "auto" },
-        "power": { "enum": ["auto", "rapl", "none", "mock"], "default": "auto" }
+        "storage": {
+          "enum": [
+            "auto",
+            "zfs",
+            "plain",
+            "mock"
+          ],
+          "default": "auto"
+        },
+        "gpu": {
+          "enum": [
+            "auto",
+            "nvidia",
+            "amd",
+            "none",
+            "mock"
+          ],
+          "default": "auto"
+        },
+        "power": {
+          "enum": [
+            "auto",
+            "rapl",
+            "none",
+            "mock"
+          ],
+          "default": "auto"
+        }
       }
     },
     "files": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "roots": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^/" }, "default": ["/mnt"] },
-        "followSymlinks": { "type": "boolean", "default": false }
+        "roots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "default": [
+            "/mnt"
+          ]
+        },
+        "followSymlinks": {
+          "type": "boolean",
+          "default": false
+        }
       }
     },
     "terminal": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "allowUsers": { "type": "boolean", "default": false },
-        "shell": { "type": "string" },
-        "maxSessionsPerUser": { "type": "integer", "minimum": 1, "maximum": 50, "default": 5 },
-        "idleTimeoutMinutes": { "type": "integer", "minimum": 0, "default": 0 },
-        "detachedTtlMinutes": { "type": "integer", "minimum": 1, "default": 30 },
-        "recordSessions": { "type": "boolean", "default": false }
+        "allowUsers": {
+          "type": "boolean",
+          "default": false
+        },
+        "shell": {
+          "type": "string"
+        },
+        "maxSessionsPerUser": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 5
+        },
+        "idleTimeoutMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "detachedTtlMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 30
+        },
+        "recordSessions": {
+          "type": "boolean",
+          "default": false
+        },
+        "requireStepUpWhenRemote": {
+          "type": "boolean",
+          "default": true
+        }
       }
     },
     "addons": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean", "default": true },
-        "portRange": { "type": "string", "pattern": "^[0-9]{4,5}-[0-9]{4,5}$", "default": "20000-29999" },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "portRange": {
+          "type": "string",
+          "pattern": "^[0-9]{4,5}-[0-9]{4,5}$",
+          "default": "20000-29999"
+        },
         "catalogs": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": false, "required": ["id", "url"],
-            "properties": { "id": { "type": "string" }, "url": { "type": "string" }, "verify": { "type": "boolean", "default": true } } }
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "url"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "verify": {
+                "type": "boolean",
+                "default": true
+              }
+            }
+          }
         }
       }
     },
     "repopapers": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean", "default": true },
-        "githubTokenFile": { "type": "string" },
-        "sources": { "type": "array", "items": { "enum": ["github", "arxiv", "semanticscholar", "huggingface", "openalex"] } }
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "githubTokenFile": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "github",
+              "arxiv",
+              "semanticscholar",
+              "huggingface",
+              "openalex"
+            ]
+          }
+        }
       }
     },
     "logging": {
-      "type": "object", "additionalProperties": false,
-      "properties": { "level": { "enum": ["debug", "info", "warn", "error"], "default": "info" }, "format": { "enum": ["json", "text"], "default": "json" } }
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "default": "info"
+        },
+        "format": {
+          "enum": [
+            "json",
+            "text"
+          ],
+          "default": "json"
+        }
+      }
+    },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowCidrs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     }
   }
 }

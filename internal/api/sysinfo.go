@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OWNER/yubeos/internal/version"
+	"github.com/serpis172/Yubeos/internal/version"
 )
 
 // SystemInfo mirrors components.schemas.SystemInfo in api/openapi.yaml.

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -25,28 +26,48 @@ type Config struct {
 	Addons     Addons     `json:"addons"`
 	RepoPapers RepoPapers `json:"repopapers"`
 	Logging    Logging    `json:"logging"`
+	Access     Access     `json:"access"`
+}
+
+// Access restricts which client networks may reach the login at all (applied before any auth logic).
+type Access struct {
+	AllowCIDRs []string `json:"allowCidrs"` // empty = no restriction; local origins are always allowed
 }
 
 type Server struct {
-	Listen       string   `json:"listen"`
-	HTTPRedirect string   `json:"httpRedirect"`
-	AllowedHosts []string `json:"allowedHosts"`
-	TLS          TLS      `json:"tls"`
+	Listen              string   `json:"listen"`
+	HTTPRedirect        string   `json:"httpRedirect"`
+	AllowedHosts        []string `json:"allowedHosts"`
+	Exposure            string   `json:"exposure"`            // lan | remote (docs/REMOTE-ACCESS.md)
+	BehindProxy         bool     `json:"behindProxy"`         // TLS terminated by a tunnel/reverse proxy in front of yubeosd
+	TrustedProxies      []string `json:"trustedProxies"`      // IPs/CIDRs allowed to set X-Forwarded-For
+	TreatOverlayAsLocal bool     `json:"treatOverlayAsLocal"` // classify 100.64.0.0/10 (Tailscale/CGNAT) as local
+	TLS                 TLS      `json:"tls"`
 }
 
 type TLS struct {
-	Mode     string `json:"mode"` // selfsigned | files | acme
-	CertFile string `json:"certFile"`
-	KeyFile  string `json:"keyFile"`
+	Mode        string   `json:"mode"` // selfsigned | files | acme
+	CertFile    string   `json:"certFile"`
+	KeyFile     string   `json:"keyFile"`
+	ACMEDomains []string `json:"acmeDomains"`
+	ACMEEmail   string   `json:"acmeEmail"`
 }
 
 type Auth struct {
-	AdminGroup          string `json:"adminGroup"`
-	UserGroup           string `json:"userGroup"`
-	AllowRoot           bool   `json:"allowRoot"`
-	SessionIdleMinutes  int    `json:"sessionIdleMinutes"`
-	SessionMaxHours     int    `json:"sessionMaxHours"`
-	Require2FAForAdmins bool   `json:"require2faForAdmins"`
+	Mode                         string `json:"mode"` // native (Yubeos credentials) | pam (LAN only)
+	AdminGroup                   string `json:"adminGroup"`
+	UserGroup                    string `json:"userGroup"`
+	AllowRoot                    bool   `json:"allowRoot"`
+	SessionIdleMinutes           int    `json:"sessionIdleMinutes"`
+	SessionMaxHours              int    `json:"sessionMaxHours"`
+	Require2FA                   string `json:"require2fa"`        // none | admins | all
+	TrustedDeviceDays            int    `json:"trustedDeviceDays"` // 0 disables "remember this device"
+	AllowPasskeyAsSoleFactor     bool   `json:"allowPasskeyAsSoleFactor"`
+	LockoutThreshold             int    `json:"lockoutThreshold"`
+	LockoutMinutes               int    `json:"lockoutMinutes"`
+	RemoteIdleMinutes            int    `json:"remoteIdleMinutes"`
+	AdminRemoteTrustedDeviceDays int    `json:"adminRemoteTrustedDeviceDays"`
+	BreachCheck                  bool   `json:"breachCheck"` // k-anonymity HIBP lookup when a password is set (outbound call)
 }
 
 type Providers struct {
@@ -61,12 +82,13 @@ type Files struct {
 }
 
 type Terminal struct {
-	AllowUsers         bool   `json:"allowUsers"`
-	Shell              string `json:"shell"`
-	MaxSessionsPerUser int    `json:"maxSessionsPerUser"`
-	IdleTimeoutMinutes int    `json:"idleTimeoutMinutes"`
-	DetachedTTLMinutes int    `json:"detachedTtlMinutes"`
-	RecordSessions     bool   `json:"recordSessions"`
+	AllowUsers              bool   `json:"allowUsers"`
+	RequireStepUpWhenRemote bool   `json:"requireStepUpWhenRemote"`
+	Shell                   string `json:"shell"`
+	MaxSessionsPerUser      int    `json:"maxSessionsPerUser"`
+	IdleTimeoutMinutes      int    `json:"idleTimeoutMinutes"`
+	DetachedTTLMinutes      int    `json:"detachedTtlMinutes"`
+	RecordSessions          bool   `json:"recordSessions"`
 }
 
 type Addons struct {
@@ -95,14 +117,16 @@ type Logging struct {
 // Default returns the built-in defaults (identical to the schema defaults).
 func Default() Config {
 	return Config{
-		Server: Server{Listen: ":443", HTTPRedirect: ":80", TLS: TLS{Mode: "selfsigned"}},
+		Server: Server{Listen: ":443", HTTPRedirect: ":80", Exposure: "lan", TreatOverlayAsLocal: true, TLS: TLS{Mode: "selfsigned"}},
 		Auth: Auth{
-			AdminGroup: "yubeos-admin", UserGroup: "yubeos-user",
+			Mode: "native", AdminGroup: "yubeos-admin", UserGroup: "yubeos-user",
 			SessionIdleMinutes: 30, SessionMaxHours: 12,
+			Require2FA: "admins", TrustedDeviceDays: 30, AllowPasskeyAsSoleFactor: true,
+			LockoutThreshold: 10, LockoutMinutes: 15, RemoteIdleMinutes: 15, AdminRemoteTrustedDeviceDays: 14,
 		},
 		Providers: Providers{Storage: "auto", GPU: "auto", Power: "auto"},
 		Files:     Files{Roots: []string{"/mnt"}},
-		Terminal:  Terminal{MaxSessionsPerUser: 5, DetachedTTLMinutes: 30},
+		Terminal:  Terminal{MaxSessionsPerUser: 5, DetachedTTLMinutes: 30, RequireStepUpWhenRemote: true},
 		Addons:    Addons{Enabled: true, PortRange: "20000-29999"},
 		RepoPapers: RepoPapers{
 			Enabled: true,
@@ -220,6 +244,64 @@ func (c Config) Validate() error {
 	if c.Server.TLS.Mode == "files" && (c.Server.TLS.CertFile == "" || c.Server.TLS.KeyFile == "") {
 		bad("server.tls.mode=files requires certFile and keyFile")
 	}
+	if !oneOf(c.Server.Exposure, "lan", "remote") {
+		bad("server.exposure must be lan|remote, got %q", c.Server.Exposure)
+	}
+	for _, p := range c.Server.TrustedProxies {
+		if !validIPOrCIDR(p) {
+			bad("server.trustedProxies entry %q is not an IP or CIDR", p)
+		}
+	}
+	if c.Server.BehindProxy && len(c.Server.TrustedProxies) == 0 {
+		bad("server.behindProxy=true requires server.trustedProxies (otherwise client IPs cannot be trusted)")
+	}
+	if c.Server.TLS.Mode == "acme" && len(c.Server.TLS.ACMEDomains) == 0 {
+		bad("server.tls.mode=acme requires server.tls.acmeDomains")
+	}
+	if !oneOf(c.Auth.Mode, "native", "pam") {
+		bad("auth.mode must be native|pam, got %q", c.Auth.Mode)
+	}
+	if !oneOf(c.Auth.Require2FA, "none", "admins", "all") {
+		bad("auth.require2fa must be none|admins|all, got %q", c.Auth.Require2FA)
+	}
+	if c.Auth.TrustedDeviceDays < 0 || c.Auth.TrustedDeviceDays > 90 {
+		bad("auth.trustedDeviceDays must be 0..90")
+	}
+	if c.Auth.LockoutThreshold < 3 || c.Auth.LockoutThreshold > 100 {
+		bad("auth.lockoutThreshold must be 3..100")
+	}
+	if c.Auth.RemoteIdleMinutes < 5 || c.Auth.RemoteIdleMinutes > c.Auth.SessionIdleMinutes {
+		bad("auth.remoteIdleMinutes must be 5..sessionIdleMinutes")
+	}
+	if c.Auth.AdminRemoteTrustedDeviceDays < 0 || c.Auth.AdminRemoteTrustedDeviceDays > 90 {
+		bad("auth.adminRemoteTrustedDeviceDays must be 0..90")
+	}
+	for _, p := range c.Access.AllowCIDRs {
+		if _, _, err := net.ParseCIDR(p); err != nil {
+			bad("access.allowCidrs entry %q is not a CIDR", p)
+		}
+	}
+	if c.Auth.LockoutMinutes < 1 || c.Auth.LockoutMinutes > 1440 {
+		bad("auth.lockoutMinutes must be 1..1440")
+	}
+	if c.Server.Exposure == "remote" {
+		// Hard safety rules for internet-reachable instances (docs/REMOTE-ACCESS.md §3).
+		if len(c.Server.AllowedHosts) == 0 {
+			bad("server.exposure=remote requires server.allowedHosts (your public hostname) to defeat DNS rebinding")
+		}
+		if !c.Server.BehindProxy && c.Server.TLS.Mode == "selfsigned" {
+			bad("server.exposure=remote requires a trusted certificate: tls.mode=files|acme, or behindProxy=true")
+		}
+		if c.Auth.Mode != "native" {
+			bad("server.exposure=remote requires auth.mode=native (PAM mode is LAN-only)")
+		}
+		if c.Auth.Require2FA != "all" {
+			bad("server.exposure=remote requires auth.require2fa=all")
+		}
+		if c.Auth.AllowRoot {
+			bad("server.exposure=remote forbids auth.allowRoot")
+		}
+	}
 	if c.Auth.AdminGroup == "" || c.Auth.UserGroup == "" || c.Auth.AdminGroup == c.Auth.UserGroup {
 		bad("auth.adminGroup and auth.userGroup must be set and different")
 	}
@@ -278,6 +360,13 @@ func (c Config) Validate() error {
 		return fmt.Errorf("invalid configuration:\n  - %s", strings.Join(errs, "\n  - "))
 	}
 	return nil
+}
+
+func validIPOrCIDR(s string) bool {
+	if _, _, err := net.ParseCIDR(s); err == nil {
+		return true
+	}
+	return net.ParseIP(s) != nil
 }
 
 func parsePortRange(s string) (lo, hi int, ok bool) {

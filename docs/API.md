@@ -19,7 +19,7 @@ Machine-readable source of truth: [`api/openapi.yaml`](../api/openapi.yaml) (Ope
 | Rate limits | Login and expensive endpoints; `429` + `Retry-After` |
 | Compression | gzip/br for JSON > 1 KB |
 
-Common problem codes: `unauthenticated`(401), `forbidden`(403), `reauth-required`(403, header `X-Yubeos-Reauth: required`), `not-found`(404), `conflict`(409), `validation`(422), `precondition-failed`(412), `rate-limited`(429), `priv-unavailable`(503), `capability-missing`(501), `plan-expired`(409).
+Common problem codes: `unauthenticated`(401), `forbidden`(403), `reauth-required`(403, header `X-Yubeos-Reauth: required`), `locked-out`(429), `ip-banned`(403), `not-found`(404), `conflict`(409), `validation`(422), `precondition-failed`(412), `rate-limited`(429), `priv-unavailable`(503), `capability-missing`(501), `plan-expired`(409).
 
 ## 2. Endpoint overview
 
@@ -31,16 +31,26 @@ Common problem codes: `unauthenticated`(401), `forbidden`(403), `reauth-required
 | GET | `/jobs`, `/jobs/{id}` · POST `/jobs/{id}/cancel` | job registry |
 | GET | `/audit` | admin; filters `from,to,actor,action`; `format=ndjson` export |
 
-### Auth
+### Auth ([AUTHENTICATION](AUTHENTICATION.md))
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/auth/login` | `{username, password, totp?}` → sets cookie; `202 {needs2fa:true}` when TOTP required |
+| POST | `/auth/login` | `{username, password}` → `200` session (trusted device / policy allows) or `202 {needs2fa, methods[], challengeId, enrollmentRequired?}` |
+| POST | `/auth/2fa/verify` | `{challengeId, method: totp|recovery, code, trustDevice?, deviceLabel?}` → session |
+| POST | `/auth/webauthn/login/begin` · `/finish` | passkey login (sole factor when `allowPasskeyAsSoleFactor`) or 2FA step |
 | POST | `/auth/logout` | |
-| GET | `/auth/me` | user, role, csrf token, 2FA state, preferences version |
-| POST | `/auth/reauth` | password → step-up window (5 min) |
-| POST | `/auth/totp/enroll` · `/auth/totp/confirm` · DELETE `/auth/totp` | |
-| GET/DELETE | `/auth/sessions[/{id}]` | own; admin all |
-| GET/POST/DELETE | `/auth/tokens[/{id}]` | API tokens |
+| GET | `/auth/me` | user, role, csrf token, factors, `remoteSession`, `trustedDevice` |
+| POST | `/auth/stepup` | password + second factor (or passkey) → 5-minute step-up window |
+| PUT | `/auth/password` | step-up; revokes other sessions and all trusted devices |
+| POST | `/auth/totp/enroll` · `/auth/totp/confirm` · DELETE `/auth/totp` | confirm returns recovery codes once; step-up |
+| POST | `/auth/webauthn/register/begin` · `/finish` · DELETE `/auth/webauthn/{id}` | passkeys; step-up |
+| POST | `/auth/recovery-codes:regenerate` | step-up |
+| GET/DELETE | `/auth/devices[/{id}]` · POST `/auth/devices:revokeAll` | trusted devices + sessions of the caller; admin may pass `?user=` |
+| POST | `/auth/setup` | consume a one-time setup link (local origin only) to set the first password / enrol factors |
+| GET/POST/DELETE | `/auth/tokens[/{id}]` | API tokens (step-up to create) |
+| GET | `/security/remote-status` | admin: readiness checklist ([REMOTE-ACCESS §7](REMOTE-ACCESS.md#7-remote-access-readiness-check)) |
+| POST | `/security/lockdown` | admin, step-up: `{enabled}` deny all remote origins |
+
+Login responses never reveal whether a username exists. Problem codes added: `enrollment-required-local`, `locked-out`, `ip-banned`, `second-factor-required`, `challenge-expired`, `device-revoked`.
 
 ### Metrics
 | Method | Path | Notes |

@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/OWNER/yubeos/internal/clock"
-	"github.com/OWNER/yubeos/internal/config"
-	"github.com/OWNER/yubeos/internal/problem"
+	"github.com/serpis172/Yubeos/internal/clock"
+	"github.com/serpis172/Yubeos/internal/config"
+	"github.com/serpis172/Yubeos/internal/problem"
 )
 
 // Options are the dependencies of the API server.

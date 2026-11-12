@@ -1,7 +1,7 @@
-# Replace @OWNER with the GitHub user/team. Privileged code requires two approvals (see docs/engineering/CODE-REVIEW.md §7).
-*                         @OWNER
-/internal/privd/          @OWNER
-/internal/priv/           @OWNER
-/cmd/yubeos-priv/         @OWNER
-/packaging/               @OWNER
-/docs/SECURITY.md         @OWNER
+# Privileged code requires two approvals (see docs/engineering/CODE-REVIEW.md §7).
+*                         @serpis172
+/internal/privd/          @serpis172
+/internal/priv/           @serpis172
+/cmd/yubeos-priv/         @serpis172
+/packaging/               @serpis172
+/docs/SECURITY.md         @serpis172

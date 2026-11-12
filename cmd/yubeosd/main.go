@@ -17,12 +17,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/OWNER/yubeos/internal/api"
-	"github.com/OWNER/yubeos/internal/clock"
-	"github.com/OWNER/yubeos/internal/config"
-	"github.com/OWNER/yubeos/internal/tlsutil"
-	"github.com/OWNER/yubeos/internal/version"
-	"github.com/OWNER/yubeos/web"
+	"github.com/serpis172/Yubeos/internal/api"
+	"github.com/serpis172/Yubeos/internal/clock"
+	"github.com/serpis172/Yubeos/internal/config"
+	"github.com/serpis172/Yubeos/internal/tlsutil"
+	"github.com/serpis172/Yubeos/internal/version"
+	"github.com/serpis172/Yubeos/web"
 )
 
 func main() { os.Exit(run(os.Args[1:], os.Environ())) }

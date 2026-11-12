@@ -20,20 +20,22 @@ It is a **platform layer**, not a new kernel or distribution. Linux, ZFS, Samba 
 | **Terminal** | Multi-tab PTY shell in the browser, per authenticated Linux user | [terminal](docs/modules/terminal.md) |
 | **Add-ons** | Compose-based app catalogue with lifecycle management and embedded UIs | [addons](docs/modules/addons.md) |
 | **Repo-Papers** | Ranked GitHub repositories and papers by time window and topic | [repo-papers](docs/modules/repo-papers.md) |
+| **Security & remote access** | Passkeys / password + TOTP, trusted devices, sessions, API tokens, remote-access readiness | [authentication](docs/AUTHENTICATION.md), [remote access](docs/REMOTE-ACCESS.md) |
 | **Appearance** | Theme engine: colours, fonts, density, layout, presets, import/export | [appearance](docs/modules/appearance.md) |
 
 ## Design goals
 
 1. **Professional and boring where it matters.** Predictable, typed, tested, documented.
-2. **Least privilege.** The network-facing process is unprivileged; root actions go through a minimal allow-listed helper.
-3. **Linux stays the source of truth.** Yubeos never hides state that `zpool`, `smb.conf` or `docker` would show you.
-4. **Contract first.** OpenAPI + JSON Schemas are written before the code that implements them.
-5. **Develop anywhere.** A `--demo` mode with deterministic mock hardware lets you build the UI on a laptop (including Windows + WSL2).
-6. **Small footprint.** One Go binary (UI embedded), SQLite, no external services.
+2. **Least privilege.** The network-facing process is unprivileged; root actions and credentials live behind a minimal allow-listed helper.
+3. **Safe to reach from outside.** Passkeys or password + 2FA, remembered devices, lockout/bans, trusted TLS, and an `exposure: remote` mode that refuses unsafe configurations.
+4. **Linux stays the source of truth.** Yubeos never hides state that `zpool`, `smb.conf` or `docker` would show you.
+5. **Contract first.** OpenAPI + JSON Schemas are written before the code that implements them.
+6. **Develop anywhere.** A `--demo` mode with deterministic mock hardware lets you build the UI on a laptop (including Windows + WSL2).
+7. **Small footprint.** One Go binary (UI embedded), SQLite, no external services.
 
 ## Documentation map
 
-- **Start here:** [Architecture](docs/ARCHITECTURE.md) → [Security](docs/SECURITY.md) → [Roadmap](docs/ROADMAP.md)
+- **Start here:** [Architecture](docs/ARCHITECTURE.md) → [Security](docs/SECURITY.md) → [Authentication](docs/AUTHENTICATION.md) → [Remote access](docs/REMOTE-ACCESS.md) → [Roadmap](docs/ROADMAP.md)
 - **Contracts:** [API](docs/API.md) · [Data model](docs/DATA-MODEL.md) · [`schemas/`](schemas/)
 - **Front end:** [UI design](docs/UI-DESIGN.md) · [Appearance module](docs/modules/appearance.md)
 - **Working on it:** [Development](docs/DEVELOPMENT.md) · [Testing](docs/TESTING.md) · [Deployment](docs/DEPLOYMENT.md) · [Contributing](CONTRIBUTING.md)
@@ -53,14 +55,14 @@ It is a **platform layer**, not a new kernel or distribution. Linux, ZFS, Samba 
 ## Quick start (planned, Phase 8)
 
 ```bash
-curl -fsSL https://github.com/OWNER/yubeos/releases/latest/download/install.sh | sudo bash
-# open https://<server>/  and sign in with a Linux account in the `yubeos-admin` group
+curl -fsSL https://github.com/serpis172/Yubeos/releases/latest/download/install.sh | sudo bash
+sudo yubeosctl user add <linux-user> --admin    # prints a one-time setup link: choose a password, enrol a passkey/TOTP
 ```
 
 ## Try it now (Phase 0 — demo mode)
 
 ```bash
-git clone https://github.com/OWNER/yubeos && cd yubeos
+git clone https://github.com/serpis172/Yubeos && cd Yubeos
 make deps && make demo     # https://localhost:8443 (self-signed certificate, mock hardware, NO authentication)
 make test lint             # Go (race) + web tests, vet, tsc, eslint, schema checks
 ```
@@ -69,4 +71,4 @@ Needs Go ≥ 1.22 and Node ≥ 22. Only the shell, `/healthz` and `/api/v1/syste
 
 ## License
 
-Apache-2.0 (proposed — see [OPEN-QUESTIONS](docs/OPEN-QUESTIONS.md) Q2). `OWNER` placeholders in docs are replaced at repository creation.
+Apache-2.0 — see [LICENSE](LICENSE).

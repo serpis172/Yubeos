@@ -13,12 +13,14 @@ We record decisions that are expensive to reverse. Status values: **Proposed** (
 | [0007](0007-rest-ws-openapi.md) | REST + WebSocket, OpenAPI source of truth | Accepted |
 | [0008](0008-compose-addons.md) | Docker Compose add-on runtime | Accepted |
 | [0009](0009-distribution.md) | Ship as a layer (.deb/apt) first | Accepted |
-| [0010](0010-auth.md) | Linux accounts via PAM, sessions, TOTP | Accepted |
+| [0010](0010-auth.md) | Linux accounts via PAM, sessions, TOTP | Superseded by 0016 |
 | [0011](0011-theming.md) | Data-only themes → CSS tokens | Accepted |
 | [0012](0012-demo-mode.md) | Provider interfaces + demo mode | Accepted |
 | [0013](0013-dependency-policy.md) | Dependency policy | Accepted |
 | [0014](0014-terminal-spawn.md) | Terminal as systemd transient units | **Proposed** (spike S-3) |
 | [0015](0015-fsworker.md) | Per-session file workers | **Proposed** (spike S-2) |
+| [0016](0016-native-credentials.md) | Native credentials, passkeys, TOTP, trusted devices | Accepted |
+| [0017](0017-remote-access.md) | Remote access via exposure modes | Accepted |
 
 ## Template
 

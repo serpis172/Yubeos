@@ -10,7 +10,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/OWNER/yubeos/internal/config"
+	"github.com/serpis172/Yubeos/internal/config"
 )
 
 func testUI() fstest.MapFS {

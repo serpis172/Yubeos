@@ -60,7 +60,7 @@ All transitions are **jobs**. Compose project name `yubeos-<id>`; all objects la
 ## 4. Catalogue
 
 - A catalogue is a **git repository or HTTPS tarball** with `index.json` (generated in CI) + `addons/<id>/{addon.yaml,compose.yaml,icon,README.md}`.
-- `official` catalogue (`OWNER/yubeos-addons`) is signed (minisign/cosign); verification on refresh; unsigned/foreign catalogues require explicit admin opt-in and are badged *Community*.
+- `official` catalogue (`serpis172/Yubeos-addons`) is signed (minisign/cosign); verification on refresh; unsigned/foreign catalogues require explicit admin opt-in and are badged *Community*.
 - Refresh daily + manual; ETag caching; stored in SQLite `addon_catalog_entries`.
 - First-party manifests **pin images by digest**; community ones are flagged if they use mutable tags.
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/OWNER/yubeos/internal/problem"
+	"github.com/serpis172/Yubeos/internal/problem"
 )
 
 // Role is an authorisation level (see docs/SECURITY.md §5).

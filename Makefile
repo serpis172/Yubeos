@@ -3,7 +3,7 @@ SHELL := /bin/bash
 GO      ?= go
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
-LDFLAGS := -s -w -X github.com/OWNER/yubeos/internal/version.Version=$(VERSION) -X github.com/OWNER/yubeos/internal/version.Commit=$(COMMIT)
+LDFLAGS := -s -w -X github.com/serpis172/Yubeos/internal/version.Version=$(VERSION) -X github.com/serpis172/Yubeos/internal/version.Commit=$(COMMIT)
 DEMO_PORT ?= 8443
 
 .PHONY: help deps gen web build test lint fmt demo dev-web check-schemas clean

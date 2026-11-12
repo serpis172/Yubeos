@@ -42,6 +42,9 @@ Benefits: session appears in `loginctl`, PAM session modules run (limits, motd o
 
 ## 4. Security notes
 
+When the session origin is **remote** (non-local client address), opening a terminal requires a fresh **step-up** (`terminal.requireStepUpWhenRemote`, default on): password + second factor or passkey, even on a trusted device ([AUTHENTICATION §7](../AUTHENTICATION.md#7-step-up-re-authentication-for-dangerous-actions)).
+
+
 See [SECURITY §6](../SECURITY.md#6-module-specific-controls). Terminal input/output is never logged by default; open/close/attach events are audited with user, IP and unit name.
 
 ## 5. Acceptance criteria (Phase 3)

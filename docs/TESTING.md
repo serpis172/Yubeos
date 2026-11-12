@@ -10,7 +10,7 @@
 | Unit (UI) | Vitest + Testing Library | hooks, components, theme engine, formatters | every PR |
 | Component visual | Storybook + Playwright screenshots (3 presets) | components & key pages in `--demo` | every PR (diff review) |
 | E2E | Playwright against `--demo` | login, dashboard live data, file ops (mock FS), disk alias, add-on install (mock), theme change | every PR |
-| Integration (real) | VM lab (QEMU) via `make vm-test` | priv helper, PAM, ZFS create/scrub/replace, Samba, terminals, fsworker, Docker add-ons | nightly + before release |
+| Integration (real) | VM lab (QEMU) via `make vm-test` | priv helper, credential store, WebAuthn/TOTP login, remote-mode origin rules, ACME (Pebble), ZFS create/scrub/replace, Samba, terminals, fsworker, Docker add-ons | nightly + before release |
 | Security | `govulncheck`, `gosec`, CodeQL, `npm audit`, ZAP baseline vs demo, hostile-input suites, fuzzing (`go test -fuzz`) on parsers/path/manifest | | PR (static) / nightly (dynamic) |
 | Performance | `k6` (API), soak script (metrics/ws), Lighthouse CI | budgets from ARCHITECTURE §1 & UI-DESIGN §6 | nightly |
 | Accessibility | axe-core in Playwright | each page × 2 themes | every PR |

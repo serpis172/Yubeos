@@ -48,13 +48,16 @@ P2..P8 ─▶ P9 Hardening & Release 1.0
 | SQLite open + migration runner + `0001_init.sql` | ⏳ deferred → TD-010 |
 | YAML config decoding | ⏳ deferred → TD-009 |
 
-### P1 — Core spine · `v0.1.0`
-Split into three parallel-able tracks:
-- **1a Privilege spine:** `yubeos-priv` + RPC framing + registry + audit + `pam.authenticate`; in-process fake for demo; hostile-input tests.
-- **1b Auth & session:** login/logout/me, sessions, CSRF, rate limiting, RBAC middleware (default-deny), TOTP, API tokens, audit hash chain, TLS self-signed.
-- **1c Shell & theme engine:** React shell (sidebar/top bar/routes/lazy modules), generated API client, token system, 4 presets, theme editor (Appearance), i18n en/it, jobs tray, `/ws/events`.
-**DoD:** log in with a real Linux account in a VM; unprivileged daemon verified (`ps`, capabilities); theme switch live; axe scan clean; priv hostile-input suite green.
-**Risks:** PAM+cgo packaging; mitigated by building `yubeos-priv` in CI on Ubuntu 24.04 and Debian 13 containers.
+### P1 — Core spine, authentication and remote access · `v0.1.0`
+The largest security-critical phase; sub-phases are **sequential** (each builds on the previous), UI work (1e) can start in parallel after 1b's contract is merged.
+- **1a Privilege spine:** `yubeos-priv` + RPC framing + method registry + audit + SQLite layer in `yubeosd` (clears TD-010) + YAML config (clears TD-009); in-process fake helper for demo; hostile-input tests.
+- **1b Credentials & sessions:** credential store in the helper (Argon2id, calibration), `auth.password.*`, `setup` links + `yubeosctl user add/reset`, login/logout/me, sessions (hashed IDs, rotation, idle/absolute, origin class), CSRF + Origin checks, RBAC middleware (default-deny, already scaffolded), API tokens, audit hash chain, lockout + dummy hashing.
+- **1c Second factors & devices:** TOTP (RFC 6238 vectors, replay protection), recovery codes, **WebAuthn passkeys**, challenges, **trusted devices** (rotation + reuse detection, revocation list), step-up tickets, enrollment-required flow.
+- **1d Remote access:** origin classification + trusted-proxy parsing, `exposure: remote` guard rails (already enforced at config level), built-in ACME, HSTS, IP bans + global cool-down, `access.allowCidrs`, fail2ban filter, `yubeosctl lockdown` and `doctor --remote`, readiness endpoint.
+- **1e Shell, login UI & Appearance:** login page (passkey first, password + 2FA, trust-device checkbox), enrollment wizard (QR, recovery codes), Security settings (devices, sessions, passkeys, tokens, remote status), theme engine + editor, i18n en/it, jobs tray, `/ws/events`.
+**Spikes:** S-1 (WebAuthn in the helper + Argon2id calibration), S-5 (ACME in a NAT/CGNAT-less lab with Pebble).
+**DoD:** all acceptance criteria of [AUTHENTICATION §11](AUTHENTICATION.md#11-acceptance-criteria-phase-1b1c) and [REMOTE-ACCESS §9](REMOTE-ACCESS.md#9-test-plan-phase-1d) pass; a real browser signs in with a passkey and with password + TOTP + trusted device in the VM lab; unprivileged daemon verified (`ps`, capabilities, cannot read `/var/lib/yubeos-priv`); axe scan clean; priv hostile-input suite green; independent security review of the auth flow (CODE-REVIEW §1) before tagging.
+**Risks:** WebAuthn library surface in a root process → helper has no network and a seccomp filter, library pinned and fuzzed; passkey RP-ID/hostname coupling → documented, tested with hostname change; Argon2id too slow on weak NAS CPUs → calibration at install.
 
 ### P2 — Dashboard · `v0.2.0`
 2a collectors + ring buffers + `/metrics/*` + `/ws/metrics` (CPU, RAM+ARC, net) · 2b GPU (NVIDIA) + RAPL via helper + disk IO · 2c UI widgets per sketch, heat grid, responsive · 2d (optional) draggable layout.
@@ -94,7 +97,7 @@ Packaging (`.deb`, apt repo, installer, upgrade/rollback tested), AppArmor, full
 
 ## After 1.0 (candidates, unscheduled)
 
-AMD/Intel GPU, alerts & notification channels, mdadm/LVM/btrfs backends, ZFS replication, native encryption UI, subdomain add-on proxy, ACME wizard, VM/libvirt module, arm64, appliance ISO (`live-build`), optional LLM summaries for Repo-Papers behind an add-on boundary, generative backgrounds.
+AMD/Intel GPU, alerts & notification channels (incl. new-device webhooks), OIDC/SSO login, DNS-01 ACME providers, WebAuthn-only enforcement mode, mdadm/LVM/btrfs backends, ZFS replication, native encryption UI, subdomain add-on proxy, ACME wizard, VM/libvirt module, arm64, appliance ISO (`live-build`), optional LLM summaries for Repo-Papers behind an add-on boundary, generative backgrounds.
 
 ## Version policy
 
@@ -104,7 +107,8 @@ SemVer. `0.x` may break config/DB with migration notes; from `1.0` DB migrations
 
 | ID | Phase | Question | Pass criteria | Recorded in |
 |---|---|---|---|---|
-| S-1 | P1 | Can `yubeos-priv` authenticate via PAM (cgo, `libpam`) and ship as a reproducible `.deb` for Ubuntu 24.04 + Debian 13? | Login works for local + LDAP-less accounts; build reproducible in CI containers | ADR-0010 addendum |
+| S-1 | P1 | Can the helper verify WebAuthn assertions (go-webauthn) and Argon2id fast enough, safely and reproducibly packaged? | Passkey register+login works on Chrome, Firefox, Safari and a hardware key; Argon2id login ≤ 300 ms on a 2-core NAS CPU; fuzz run clean | ADR-0016 addendum |
+| S-5 | P1 | Does built-in ACME (autocert) obtain and renew certificates reliably in the VM lab? | Pebble CA: issue, renew at 30 d, survive restart, :80 redirect intact | ADR-0017 addendum |
 | S-2 | P4 | Is the per-session `fsworker` (FD passing, `openat2`) fast and safe enough? | p95 list < 300 ms on 10 k entries; escape/TOCTOU tests pass | ADR-0015 (new) |
 | S-3 | P3 | `systemd-run --pty` transient units vs `fork + Credential` for terminals | See [terminal §3](modules/terminal.md#3-process-model-adr-0014) | ADR-0014 |
 | S-4 | P5c | Can `zpool status` text be parsed robustly across OpenZFS 2.2/2.3 outputs? | Golden tests from ≥ 10 captured outputs (healthy, degraded, resilvering, scrubbing, errors, spares, cache/log, removed disk) | ADR-0006 addendum |

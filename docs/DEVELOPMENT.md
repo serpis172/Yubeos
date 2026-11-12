@@ -4,7 +4,7 @@
 
 | Tool | Version | Notes |
 |---|---|---|
-| Go | ≥ 1.22 (CI uses 1.24) | `yubeosd` is pure Go; `yubeos-priv` needs cgo + `libpam0g-dev` (Linux only) |
+| Go | ≥ 1.22 (CI uses 1.24) | `yubeosd` and `yubeos-priv` are pure Go by default; the optional LAN-only PAM mode needs `-tags pam`, cgo and `libpam0g-dev` |
 | Node.js | ≥ 22 LTS | + `npm` (lockfile enforced) |
 | make, git | any | |
 | Docker | optional | only to test add-ons for real |
@@ -15,7 +15,7 @@
 The whole product runs in **demo mode** with mock hardware — no root, ZFS, GPU or Docker needed:
 
 ```bash
-git clone https://github.com/OWNER/yubeos && cd yubeos
+git clone https://github.com/serpis172/Yubeos && cd Yubeos
 make deps            # go mod download + npm ci
 make demo            # builds the UI, then runs yubeosd --demo on https://localhost:8443 (self-signed cert: accept the warning)
 # UI hot-reload: terminal 1 `go run ./cmd/yubeosd --demo --no-tls`, terminal 2 `make dev-web` → http://localhost:5173

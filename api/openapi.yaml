@@ -2,117 +2,505 @@ openapi: 3.1.0
 info:
   title: Yubeos API
   version: 0.1.0
-  description: |
-    Source of truth for the Yubeos HTTP contract. Phase 0 contains the foundation endpoints;
+  description: 'Source of truth for the Yubeos HTTP contract. Phase 0 contains the foundation endpoints;
+
     every later phase adds its paths here BEFORE implementation (see docs/ROADMAP.md).
+
     Conventions: docs/API.md.
-  license: { name: Apache-2.0, identifier: Apache-2.0 }
+
+    '
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
 servers:
-  - url: https://{host}/api/v1
-    variables: { host: { default: localhost:8443 } }
+- url: https://{host}/api/v1
+  variables:
+    host:
+      default: localhost:8443
 security:
-  - sessionCookie: []
+- sessionCookie: []
 tags:
-  - { name: system }
-  - { name: auth }
-  - { name: jobs }
+- name: system
+- name: auth
+- name: jobs
 paths:
   /healthz:
     get:
-      tags: [system]
+      tags:
+      - system
       summary: Liveness probe
       security: []
       responses:
-        "200": { description: OK, content: { application/json: { schema: { type: object, required: [ok], properties: { ok: { type: boolean } } } } } }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                properties:
+                  ok:
+                    type: boolean
   /system/info:
     get:
-      tags: [system]
+      tags:
+      - system
       summary: Host information, tool versions and detected capabilities
       responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SystemInfo" } } } }
-        "401": { $ref: "#/components/responses/Problem" }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemInfo'
+        '401':
+          $ref: '#/components/responses/Problem'
   /auth/login:
     post:
-      tags: [auth]
-      summary: Authenticate with a Linux account (PAM)
+      tags:
+      - auth
+      summary: 'First factor: Yubeos password. Returns a session, or 202 with a second-factor challenge'
       security: []
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/LoginRequest" } } }
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
       responses:
-        "200": { description: Session created (cookie set), content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } } }
-        "202": { description: Second factor required, content: { application/json: { schema: { type: object, required: [needs2fa], properties: { needs2fa: { type: boolean } } } } } }
-        "401": { $ref: "#/components/responses/Problem" }
-        "429": { $ref: "#/components/responses/Problem" }
+        '200':
+          description: Session created (cookie set)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '202':
+          description: Second factor required (skipped automatically when a valid trusted-device cookie is presented)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecondFactorChallenge'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
   /auth/me:
     get:
-      tags: [auth]
+      tags:
+      - auth
       summary: Current user, role and CSRF token
       responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } } }
-        "401": { $ref: "#/components/responses/Problem" }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/Problem'
   /jobs/{id}:
     get:
-      tags: [jobs]
+      tags:
+      - jobs
       summary: Job status
-      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Job" } } } }
-        "404": { $ref: "#/components/responses/Problem" }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /auth/2fa/verify:
+    post:
+      tags:
+      - auth
+      summary: Complete login with TOTP or a recovery code
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorRequest'
+      security: []
+  /auth/webauthn/login/begin:
+    post:
+      tags:
+      - auth
+      summary: Start passkey login (usernameless or for a named user)
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+      security: []
+  /auth/webauthn/login/finish:
+    post:
+      tags:
+      - auth
+      summary: Finish passkey login
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+      security: []
+  /auth/webauthn/register/begin:
+    post:
+      tags:
+      - auth
+      summary: Start registering a passkey for the current user (fresh 2FA required)
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+  /auth/webauthn/register/finish:
+    post:
+      tags:
+      - auth
+      summary: Finish passkey registration
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+  /auth/totp/enroll:
+    post:
+      tags:
+      - auth
+      summary: Create a TOTP secret and provisioning URI (not active until confirmed)
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+  /auth/totp/confirm:
+    post:
+      tags:
+      - auth
+      summary: Confirm TOTP enrollment with a code; returns recovery codes once
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TotpConfirmRequest'
+  /auth/stepup:
+    post:
+      tags:
+      - auth
+      summary: Fresh second-factor check opening a 5-minute step-up window
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorRequest'
+  /auth/password:
+    put:
+      tags:
+      - auth
+      summary: Change own password (step-up required)
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+  /auth/devices:
+    get:
+      tags:
+      - auth
+      summary: List trusted devices and active sessions of the current user
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+  /auth/devices/{id}:
+    delete:
+      tags:
+      - auth
+      summary: Revoke a trusted device or session
+      responses:
+        '204':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+  /auth/devices:revokeAll:
+    post:
+      tags:
+      - auth
+      summary: Sign out everywhere and forget all trusted devices
+      responses:
+        '204':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
-    sessionCookie: { type: apiKey, in: cookie, name: __Host-yubeos_session, description: Browser sessions also require the X-Yubeos-CSRF header on non-GET requests. }
-    bearerToken: { type: http, scheme: bearer, description: "API token (yb_...)" }
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-yubeos_session
+      description: Browser sessions also require the X-Yubeos-CSRF header on non-GET requests.
+    bearerToken:
+      type: http
+      scheme: bearer
+      description: API token (yb_...)
   responses:
     Problem:
       description: RFC 9457 problem details
-      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
   schemas:
     Problem:
       type: object
-      required: [type, title, status]
+      required:
+      - type
+      - title
+      - status
       properties:
-        type: { type: string, format: uri }
-        title: { type: string }
-        status: { type: integer }
-        detail: { type: string }
-        instance: { type: string }
-        errors: { type: array, items: { type: object, required: [pointer, message], properties: { pointer: { type: string }, message: { type: string } } } }
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+            - pointer
+            - message
+            properties:
+              pointer:
+                type: string
+              message:
+                type: string
     LoginRequest:
       type: object
-      required: [username, password]
+      required:
+      - username
+      - password
       additionalProperties: false
       properties:
-        username: { type: string, maxLength: 64 }
-        password: { type: string, maxLength: 1024 }
-        totp: { type: string, pattern: "^[0-9]{6}$" }
+        username:
+          type: string
+          maxLength: 64
+        password:
+          type: string
+          maxLength: 1024
+        deviceHint:
+          type: string
+          maxLength: 60
+          description: Optional label suggested for 'remember this device'
     Me:
       type: object
-      required: [username, role, csrf]
+      required:
+      - username
+      - role
+      - csrf
       properties:
-        username: { type: string }
-        role: { type: string, enum: [admin, user] }
-        csrf: { type: string }
-        totpEnabled: { type: boolean }
+        username:
+          type: string
+        role:
+          type: string
+          enum:
+          - admin
+          - user
+        csrf:
+          type: string
+        totpEnabled:
+          type: boolean
+        factors:
+          type: array
+          items:
+            type: string
+            enum:
+            - password
+            - passkey
+            - totp
+        trustedDevice:
+          type: boolean
+        remoteSession:
+          type: boolean
+          description: Session originates from a non-local address
     SystemInfo:
       type: object
-      required: [hostname, version, demoMode, capabilities]
+      required:
+      - hostname
+      - version
+      - demoMode
+      - capabilities
       properties:
-        hostname: { type: string }
-        version: { type: string }
-        demoMode: { type: boolean }
-        uptimeSeconds: { type: integer }
-        os: { type: object, properties: { name: { type: string }, version: { type: string }, kernel: { type: string } } }
-        versions: { type: object, additionalProperties: { type: string }, description: "zfs, smartctl, samba, docker, compose, nvidia-smi ..." }
-        capabilities: { type: object, additionalProperties: { type: boolean } }
+        hostname:
+          type: string
+        version:
+          type: string
+        demoMode:
+          type: boolean
+        uptimeSeconds:
+          type: integer
+        os:
+          type: object
+          properties:
+            name:
+              type: string
+            version:
+              type: string
+            kernel:
+              type: string
+        versions:
+          type: object
+          additionalProperties:
+            type: string
+          description: zfs, smartctl, samba, docker, compose, nvidia-smi ...
+        capabilities:
+          type: object
+          additionalProperties:
+            type: boolean
     Job:
       type: object
-      required: [id, kind, state]
+      required:
+      - id
+      - kind
+      - state
       properties:
-        id: { type: string }
-        kind: { type: string }
-        state: { type: string, enum: [queued, running, succeeded, failed, cancelled] }
-        progress: { type: number, minimum: 0, maximum: 1 }
-        message: { type: string }
-        createdAt: { type: string, format: date-time }
-        finishedAt: { type: [string, "null"], format: date-time }
+        id:
+          type: string
+        kind:
+          type: string
+        state:
+          type: string
+          enum:
+          - queued
+          - running
+          - succeeded
+          - failed
+          - cancelled
+        progress:
+          type: number
+          minimum: 0
+          maximum: 1
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    SecondFactorChallenge:
+      type: object
+      required:
+      - needs2fa
+      - methods
+      properties:
+        needs2fa:
+          type: boolean
+        methods:
+          type: array
+          items:
+            type: string
+            enum:
+            - webauthn
+            - totp
+            - recovery
+        challengeId:
+          type: string
+          description: Opaque, single-use, expires in 5 minutes
+        enrollmentRequired:
+          type: boolean
+          description: True when policy demands 2FA but the user has none yet; only possible from a local network
+    SecondFactorRequest:
+      type: object
+      required:
+      - method
+      additionalProperties: false
+      properties:
+        challengeId:
+          type: string
+        method:
+          type: string
+          enum:
+          - totp
+          - recovery
+          - webauthn
+        code:
+          type: string
+          maxLength: 32
+        trustDevice:
+          type: boolean
+          description: Remember this device (skips TOTP prompt for auth.trustedDeviceDays)
+        deviceLabel:
+          type: string
+          maxLength: 60
+    TotpConfirmRequest:
+      type: object
+      required:
+      - code
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: ^[0-9]{6}$
+    PasswordChangeRequest:
+      type: object
+      required:
+      - currentPassword
+      - newPassword
+      additionalProperties: false
+      properties:
+        currentPassword:
+          type: string
+          maxLength: 1024
+        newPassword:
+          type: string
+          minLength: 12
+          maxLength: 1024

@@ -48,10 +48,10 @@ Yubeos is a web control plane for a single Linux home server. Operators manage h
                  │ Unix socket /run/yubeos/priv.sock  (JSON-RPC 2.0, SO_PEERCRED-checked)
 ┌────────────────▼────────────────────────────────────────────────────────────────────┐
 │ yubeos-priv  (root · no network · allow-listed typed RPC · audits every call)       │
-│  pam · zfs · smart · rapl · samba/nfs render+reload · docker compose · pty/fs workers│
+│  auth store · zfs · smart · rapl · samba/nfs · docker compose · pty/fs workers        │
 └───────┬────────┬─────────┬──────────┬──────────┬──────────┬─────────────────────────┘
         ▼        ▼         ▼          ▼          ▼          ▼
-      PAM     OpenZFS   smartctl   Samba/NFS   Docker   systemd (transient units)
+    cred.db   OpenZFS   smartctl   Samba/NFS   Docker   systemd (transient units)
 ```
 
 Network egress (yubeosd only): GitHub, arXiv, Semantic Scholar, Hugging Face (Repo-Papers); add-on catalogue over git/HTTPS. All optional and individually disableable.
@@ -61,7 +61,7 @@ Network egress (yubeosd only): GitHub, arXiv, Semantic Scholar, Hugging Face (Re
 | Component | Language | Runs as | Responsibility |
 |---|---|---|---|
 | `yubeosd` | Go | `yubeos` | HTTP/WS API, embedded UI (`go:embed`), auth, RBAC, audit, jobs, collectors, module logic, SQLite |
-| `yubeos-priv` | Go (+cgo for libpam) | `root` | Only component allowed to touch privileged resources — see [SECURITY](SECURITY.md) |
+| `yubeos-priv` | Go (cgo only with optional `pam` build tag) | `root` | Only component allowed to touch privileged resources **and the credential store** — see [SECURITY](SECURITY.md), [AUTHENTICATION](AUTHENTICATION.md) |
 | `yubeosctl` | Go | any | Local CLI: `status`, `doctor`, `reset-2fa`, `export-config`, `demo` |
 | `web/` | TypeScript/React | browser | SPA, generated API client, theme engine |
 | `packaging/` | shell, systemd, nfpm | — | `.deb`, unit files, installer, AppArmor profile |
@@ -97,7 +97,7 @@ yubeos/
 └── .github/          workflows, templates, CODEOWNERS, dependabot
 ```
 
-Go module: `github.com/OWNER/yubeos`. Everything under `internal/` is private to the repo.
+Go module: `github.com/serpis172/Yubeos`. Everything under `internal/` is private to the repo.
 
 ## 5. Process model and trust boundaries
 
@@ -156,7 +156,9 @@ States: `queued → running → succeeded | failed | cancelled`. Jobs persist in
 | Disk alias, tags | Yubeos | SQLite `disk_meta`, keyed by stable ID |
 | SMB/NFS shares | Yubeos (intent) → rendered to `/etc/samba/yubeos.conf`, `/etc/exports.d/yubeos.exports` | SQLite `shares` |
 | Add-ons | Yubeos (desired) + Docker (actual) | SQLite `addons_installed`, reconciled |
-| Users, passwords | Linux (PAM) | not stored; Yubeos keeps only 2FA secrets, tokens, preferences |
+| Linux identity (uid, groups → role) | Linux | read live |
+| Web credentials (Argon2id verifiers, TOTP secrets, passkeys, recovery hashes) | Yubeos, **inside `yubeos-priv`** | `/var/lib/yubeos-priv/credentials.db` (root, `0600`) — never readable by `yubeosd` |
+| Sessions, trusted devices, throttling, bans | Yubeos (daemon) | SQLite `sessions`, `trusted_devices`, `ip_bans`, `login_failures` |
 | Themes, preferences | Yubeos | SQLite + `/var/lib/yubeos/fonts` |
 | Repo-Papers data | Yubeos | SQLite `rp_*` |
 
@@ -180,12 +182,16 @@ Storage code addresses devices only via `/dev/disk/by-id/*` (WWN → `nvme-eui` 
 `/etc/yubeos/config.yaml`, validated against `schemas/config.schema.json`, env override `YUBEOS_<PATH>` (json-tag path upper-cased and joined by `_`, e.g. `YUBEOS_SERVER_TLS_MODE`, `YUBEOS_AUTH_REQUIRE2FAFORADMINS`). **Implementation note (Phase 0):** the loader currently reads JSON (a YAML subset); the YAML decoder is tracked as TD-009, so the sample below must be written as JSON until then:
 
 ```yaml
-server:     { listen: ":443", httpRedirect: ":80", tls: { mode: selfsigned } }  # selfsigned | files | acme
-auth:       { adminGroup: yubeos-admin, userGroup: yubeos-user, sessionIdleMinutes: 30, sessionMaxHours: 12, require2faForAdmins: false }
+server:     { listen: ":443", httpRedirect: ":80", exposure: lan, allowedHosts: [], behindProxy: false, trustedProxies: [],
+              treatOverlayAsLocal: true, tls: { mode: selfsigned } }      # tls.mode: selfsigned | files | acme (+ acmeDomains, acmeEmail)
+access:     { allowCidrs: [] }                                            # optional network allow-list for remote origins
+auth:       { mode: native, adminGroup: yubeos-admin, userGroup: yubeos-user, require2fa: admins, trustedDeviceDays: 30,
+              allowPasskeyAsSoleFactor: true, sessionIdleMinutes: 30, remoteIdleMinutes: 15, sessionMaxHours: 12,
+              lockoutThreshold: 10, lockoutMinutes: 15, adminRemoteTrustedDeviceDays: 14, breachCheck: false }
 providers:  { storage: auto, gpu: auto, power: auto }
 files:      { roots: ["/mnt"], followSymlinks: false }
-terminal:   { shell: "", maxSessionsPerUser: 5, idleTimeoutMinutes: 0 }
-addons:     { enabled: true, catalogs: [ { id: official, url: "https://github.com/OWNER/yubeos-addons", verify: true } ] }
+terminal:   { allowUsers: false, requireStepUpWhenRemote: true, maxSessionsPerUser: 5, detachedTtlMinutes: 30 }
+addons:     { enabled: true, catalogs: [ { id: official, url: "https://github.com/serpis172/Yubeos-addons", verify: true } ] }
 repopapers: { enabled: true, githubTokenFile: "", sources: [github, arxiv, semanticscholar, huggingface] }
 logging:    { level: info, format: json }
 ```
