@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://yubeos.dev/schemas/config.schema.json",
-  "title": "Yubeos /etc/yubeos/config.yaml",
+  "title": "Yubeos configuration file (JSON; YAML decoding planned, TD-009)",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -20,8 +20,10 @@
         "allowedHosts": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+            "pattern": "^[A-Za-z0-9.:\\[\\]-]+$"
+          },
+          "description": "Bare hostnames/IPs (no port, scheme or wildcard)."
         },
         "tls": {
           "type": "object",
@@ -33,7 +35,8 @@
                 "files",
                 "acme"
               ],
-              "default": "selfsigned"
+              "default": "selfsigned",
+              "description": "acme is reserved and rejected until Phase 1d."
             },
             "certFile": {
               "type": "string"
@@ -289,6 +292,10 @@
               }
             }
           }
+        },
+        "baseDomain": {
+          "type": "string",
+          "description": "Domain for isolated add-on UIs: <id>.<baseDomain> (ADR-0018)."
         }
       }
     },

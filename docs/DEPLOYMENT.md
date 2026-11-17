@@ -21,6 +21,31 @@ Yubeos is a **layer** installed on a stock **Ubuntu Server 24.04 LTS** (or Debia
 
 Packages `Depends:` on `zfsutils-linux`, `smartmontools`, `samba`, `nfs-kernel-server`, `docker-ce`/`docker.io` + `docker-compose-plugin` are `Recommends:` so a minimal install is possible; the UI reflects missing capabilities.
 
+## 2.1 Services and accounts (Phase 1)
+
+| Unit / file | Runs as | Purpose |
+|---|---|---|
+| `yubeos-priv.service` | root, 1 capability (`CAP_CHOWN`), no network | credential store + typed privileged RPC on `/run/yubeos/priv.sock` (`0660 root:yubeos`) |
+| `yubeosd.service` | `yubeos` (system user, nologin), `CAP_NET_BIND_SERVICE` only | HTTPS API and web UI |
+| `sysusers.d/yubeos.conf` | — | creates user `yubeos` and groups `yubeos-admin`, `yubeos-user` |
+| `fail2ban/{filter.d/yubeos.conf,jail.d/yubeos.local}` | — | bans addresses that repeatedly fail logins (log line `yubeos-auth fail user=… ip=… reason=…`) |
+
+Sources are under `packaging/`; they have **not yet been validated with `systemd-analyze`** (TD-022) — run
+`systemd-analyze verify` and `systemd-analyze security yubeosd yubeos-priv` after installing.
+
+Manual install of a build (until the `.deb` exists, Phase 9):
+
+```bash
+sudo systemd-sysusers packaging/sysusers.d/yubeos.conf
+sudo install -m0755 dist/yubeosd dist/yubeosctl /usr/bin/ && sudo install -D -m0755 dist/yubeos-priv /usr/libexec/yubeos/yubeos-priv
+sudo install -m0644 packaging/systemd/*.service /etc/systemd/system/
+sudo install -D -m0644 packaging/config/config.example.yaml /etc/yubeos/config.yaml
+sudo systemctl daemon-reload && sudo systemctl enable --now yubeos-priv yubeosd
+sudo usermod -aG yubeos-admin <your-linux-user>
+sudo yubeosctl user add <your-linux-user> --admin        # prints the one-time setup link
+sudo yubeosctl doctor
+```
+
 ## 3. Install, first run, upgrade, rollback
 
 ```bash
@@ -51,7 +76,7 @@ Exposure guidance: the recommended way to reach Yubeos from outside is a private
 - **Logs:** journald (`yubeosd`, `yubeos-priv`, `yubeos-audit`).
 - **Backup:** config + DB are small; `yubeosctl export-config > backup.tar.zst` (no secrets unless `--with-secrets`); ZFS data is protected by snapshots/replication, not by Yubeos.
 - **Monitoring:** `/healthz`, optional `/metrics` (Prometheus).
-- **Certificates:** self-signed renewed automatically before expiry; BYO/ACME paths in config.
+- **Certificates:** the daemon re-checks every 6 h and on `SIGHUP`: self-signed certificates are regenerated 30 days before expiry, replaced `files` certificates are picked up without a restart (a failed reload keeps the previous certificate). Built-in ACME arrives in Phase 1d.
 - **Time:** relies on system NTP; clock jumps invalidate nothing but are logged.
 
 ## 6. Release artifacts

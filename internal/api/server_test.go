@@ -1,6 +1,7 @@
 package api
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -9,7 +10,9 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
+	"github.com/serpis172/Yubeos/internal/clock"
 	"github.com/serpis172/Yubeos/internal/config"
 )
 
@@ -174,5 +177,149 @@ func TestParseOSRelease(t *testing.T) {
 	got := parseOSRelease(p)
 	if got["NAME"] != "Ubuntu" || got["VERSION"] != "24.04.1 LTS (Noble Numbat)" || got["ID"] != "ubuntu" {
 		t.Fatalf("parsed: %v", got)
+	}
+}
+
+func TestCSPIsStrict(t *testing.T) {
+	csp := do(newHandler(false, nil), "GET", "/healthz", nil).Header().Get("Content-Security-Policy")
+	if strings.Contains(csp, "wss:") {
+		t.Error("connect-src must not allow arbitrary wss: hosts")
+	}
+	for _, want := range []string{"connect-src 'self'", "object-src 'none'", "frame-ancestors 'none'"} {
+		if !strings.Contains(csp, want) {
+			t.Errorf("CSP missing %q: %s", want, csp)
+		}
+	}
+}
+
+func TestHSTSOnlyInRemoteMode(t *testing.T) {
+	if h := do(newHandler(false, nil), "GET", "/healthz", nil).Header().Get("Strict-Transport-Security"); h != "" {
+		t.Fatalf("HSTS must not be sent in lan mode, got %q", h)
+	}
+	h := newHandler(false, func(c *config.Config) { c.Server.Exposure = "remote" })
+	if v := do(h, "GET", "/healthz", nil).Header().Get("Strict-Transport-Security"); !strings.Contains(v, "max-age=31536000") {
+		t.Fatalf("HSTS missing in remote mode: %q", v)
+	}
+}
+
+func TestProblemCarriesRequestID(t *testing.T) {
+	w := do(newHandler(false, nil), "GET", "/api/v1/system/info", nil)
+	var p map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &p); err != nil {
+		t.Fatal(err)
+	}
+	if p["requestId"] == "" || p["requestId"] != w.Header().Get("X-Request-Id") {
+		t.Fatalf("requestId %v does not match header %q", p["requestId"], w.Header().Get("X-Request-Id"))
+	}
+}
+
+func TestBodyLimits(t *testing.T) {
+	h := newHandler(true, nil)
+	big := strings.NewReader(strings.Repeat("x", 5000))
+	r := httptest.NewRequest("POST", "/api/v1/auth/login", big)
+	r.ContentLength = 5000
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("auth body > 4 KiB must be refused, got %d", w.Code)
+	}
+}
+
+func TestGzipCompressesLargeJSONOnly(t *testing.T) {
+	big := strings.Repeat("a", 4096)
+	h := gzipMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Query().Get("small") != "" {
+			w.Header().Set("Content-Length", "2")
+			_, _ = w.Write([]byte("{}"))
+			return
+		}
+		_, _ = w.Write([]byte(`{"v":"` + big + `"}`))
+	}))
+	w := do(h, "GET", "/x", map[string]string{"Accept-Encoding": "gzip"})
+	if w.Header().Get("Content-Encoding") != "gzip" || w.Header().Get("Vary") == "" {
+		t.Fatalf("large JSON should be gzipped: %v", w.Header())
+	}
+	zr, err := gzip.NewReader(w.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, _ := io.ReadAll(zr)
+	if !strings.Contains(string(out), big) {
+		t.Fatal("round trip mismatch")
+	}
+	if w = do(h, "GET", "/x?small=1", map[string]string{"Accept-Encoding": "gzip"}); w.Header().Get("Content-Encoding") != "" {
+		t.Fatal("tiny responses must not be compressed")
+	}
+	if w = do(h, "GET", "/x", nil); w.Header().Get("Content-Encoding") != "" {
+		t.Fatal("no Accept-Encoding ⇒ no compression")
+	}
+	if w = do(h, "GET", "/x", map[string]string{"Accept-Encoding": "gzip", "Range": "bytes=0-9"}); w.Header().Get("Content-Encoding") != "" {
+		t.Fatal("Range requests must not be compressed")
+	}
+}
+
+func TestStaticETagConditionalRequest(t *testing.T) {
+	h := newHandler(false, nil)
+	w := do(h, "GET", "/", nil)
+	et := w.Header().Get("ETag")
+	if et == "" {
+		t.Fatal("missing ETag on app shell")
+	}
+	if w2 := do(h, "GET", "/", map[string]string{"If-None-Match": et}); w2.Code != http.StatusNotModified {
+		t.Fatalf("conditional request should be 304, got %d", w2.Code)
+	}
+}
+
+func TestHostFactsAreCached(t *testing.T) {
+	calls := 0
+	clk := clock.NewFake(time.Now())
+	cfg := config.Default()
+	h := New(Options{Config: cfg, Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Clock: clk, Demo: true, UI: testUI(),
+		HostFacts: func() hostFacts { calls++; return hostFacts{Hostname: "h", Capabilities: map[string]bool{}} }})
+	for i := 0; i < 5; i++ {
+		do(h, "GET", "/api/v1/system/info", nil)
+	}
+	if calls != 1 {
+		t.Fatalf("host probed %d times within TTL, want 1", calls)
+	}
+	clk.Advance(factsTTL + time.Second)
+	do(h, "GET", "/api/v1/system/info", nil)
+	if calls != 2 {
+		t.Fatalf("expected re-probe after TTL, calls=%d", calls)
+	}
+}
+
+func TestPanicAfterPartialWriteDoesNotDoubleWriteHeader(t *testing.T) {
+	var buf strings.Builder
+	log := slog.New(slog.NewTextHandler(&buf, nil))
+	h := chain(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("partial"))
+		panic("late")
+	}), requestID, recoverer(log))
+	w := do(h, "GET", "/x", nil)
+	if w.Code != 200 || strings.Contains(w.Body.String(), "internal") {
+		t.Fatalf("response already started must not be rewritten: %d %q", w.Code, w.Body)
+	}
+	if !strings.Contains(buf.String(), "late") {
+		t.Fatal("panic must still be logged")
+	}
+}
+
+func TestHostGuardIPv6(t *testing.T) {
+	h := newHandler(false, func(c *config.Config) { c.Server.AllowedHosts = []string{"::1"} })
+	r := httptest.NewRequest("GET", "/healthz", nil)
+	r.Host = "[::1]:8443"
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 200 {
+		t.Fatalf("bracketed IPv6 host with port should match, got %d", w.Code)
+	}
+}
+
+func TestHeadOnSPA(t *testing.T) {
+	if w := do(newHandler(false, nil), "HEAD", "/", nil); w.Code != 200 {
+		t.Fatalf("HEAD / = %d", w.Code)
 	}
 }

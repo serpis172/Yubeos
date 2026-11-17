@@ -1,0 +1,43 @@
+[Unit]
+Description=Yubeos web daemon (HTTPS API and web UI)
+Documentation=https://github.com/serpis172/Yubeos
+After=network-online.target yubeos-priv.service
+Wants=network-online.target yubeos-priv.service
+
+[Service]
+Type=simple
+User=yubeos
+Group=yubeos
+ExecStart=/usr/bin/yubeosd --config /etc/yubeos/config.yaml --state-dir /var/lib/yubeos --priv-socket /run/yubeos/priv.sock
+Restart=on-failure
+RestartSec=2
+
+StateDirectory=yubeos
+StateDirectoryMode=0750
+ConfigurationDirectory=yubeos
+
+# Hardening (docs/SECURITY.md §4.4). PrivateDevices is omitted on purpose: future GPU collectors read /dev/nvidia*.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

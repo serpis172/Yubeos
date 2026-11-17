@@ -1,0 +1,16 @@
+.page { min-height: 100%; display: grid; place-items: center; padding: 24px; background: var(--y-bg); }
+.card { width: min(420px, 100%); background: var(--y-surface-1); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 28px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--y-font-display); font-weight: 700; font-size: 20px; margin-bottom: 20px; }
+.logo { width: 28px; height: 28px; border-radius: 7px; background: var(--y-accent); color: var(--y-accent-contrast); display: grid; place-items: center; font-weight: 800; }
+.card h1 { margin: 0 0 4px; font-size: 20px; font-family: var(--y-font-display); }
+.hint { margin: 0 0 18px; color: var(--y-text-muted); }
+.field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field label { font-weight: 600; font-size: 13px; }
+.field input { background: var(--y-surface-2); color: var(--y-text); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 10px 12px; font: inherit; }
+.field input:focus-visible { outline: 2px solid var(--y-accent); outline-offset: 1px; }
+.button { width: 100%; background: var(--y-accent); color: var(--y-accent-contrast); border: 0; border-radius: var(--y-radius); padding: 11px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+.button:disabled { opacity: 0.6; cursor: progress; }
+.error { background: var(--y-surface-2); border: 1px solid var(--y-danger); color: var(--y-text); border-radius: var(--y-radius); padding: 10px 12px; margin-bottom: 14px; }
+.ok { border-color: var(--y-success); }
+.link { color: var(--y-accent); }
+.footnote { margin: 16px 0 0; font-size: 12px; color: var(--y-text-muted); }

@@ -45,17 +45,27 @@ P2..P8 ─▶ P9 Hardening & Release 1.0
 | Tests: Go `-race` (api, config, tls, problem, clock, main) · vitest (nav, shell) | ✅ |
 | CI workflow (go, web, contracts, docs links) and `make` targets | ✅ (workflow not yet run on GitHub) |
 | ADRs 0001–0015 | ✅ |
+| **Review hardening (2026-11-13):** config `verify` default, acme rejected until built, runtime TLS renewal + `SIGHUP`, non-fatal HTTP redirect, loopback-only demo, strict CSP, HSTS (remote), gzip, ETag, body limits, request IDs in problems, cached host probing, OpenAPI completed and reference-checked, mobile drawer, error boundary, no-flash theme, self-hosted fonts, DCO/CodeQL/gitleaks in CI | ✅ |
 | SQLite open + migration runner + `0001_init.sql` | ⏳ deferred → TD-010 |
 | YAML config decoding | ⏳ deferred → TD-009 |
 
-### P1 — Core spine, authentication and remote access · `v0.1.0`
+### P1 — Core spine, authentication and remote access · `v0.1.0` — **status: 1a ✅ 1b ✅ (1c–1e pending)**
 The largest security-critical phase; sub-phases are **sequential** (each builds on the previous), UI work (1e) can start in parallel after 1b's contract is merged.
 - **1a Privilege spine:** `yubeos-priv` + RPC framing + method registry + audit + SQLite layer in `yubeosd` (clears TD-010) + YAML config (clears TD-009); in-process fake helper for demo; hostile-input tests.
 - **1b Credentials & sessions:** credential store in the helper (Argon2id, calibration), `auth.password.*`, `setup` links + `yubeosctl user add/reset`, login/logout/me, sessions (hashed IDs, rotation, idle/absolute, origin class), CSRF + Origin checks, RBAC middleware (default-deny, already scaffolded), API tokens, audit hash chain, lockout + dummy hashing.
 - **1c Second factors & devices:** TOTP (RFC 6238 vectors, replay protection), recovery codes, **WebAuthn passkeys**, challenges, **trusted devices** (rotation + reuse detection, revocation list), step-up tickets, enrollment-required flow.
 - **1d Remote access:** origin classification + trusted-proxy parsing, `exposure: remote` guard rails (already enforced at config level), built-in ACME, HSTS, IP bans + global cool-down, `access.allowCidrs`, fail2ban filter, `yubeosctl lockdown` and `doctor --remote`, readiness endpoint.
 - **1e Shell, login UI & Appearance:** login page (passkey first, password + 2FA, trust-device checkbox), enrollment wizard (QR, recovery codes), Security settings (devices, sessions, passkeys, tokens, remote status), theme engine + editor, i18n en/it, jobs tray, `/ws/events`.
-**Spikes:** S-1 (WebAuthn in the helper + Argon2id calibration), S-5 (ACME in a NAT/CGNAT-less lab with Pebble).
+**Done so far (verified by unit tests, HTTP-flow tests and `test/e2e/auth-smoke.sh` against the real binaries):**
+
+| Sub-phase | Delivered |
+|---|---|
+| 1a | `yubeos-priv` (typed RPC registry, peer-credential check, root-only methods, per-class timeouts), SQLite layer with embedded migrations + pre-migration backup, hash-chained audit log, YAML/JSON config (TD-009 ✅, TD-010 ✅), systemd units / sysusers / fail2ban filter, `yubeosctl` (`user add/reset`, `doctor`, `audit verify`) |
+| 1b | Argon2id credential store, setup/reset links, login/logout/me/setup/password/devices endpoints, sessions with CSRF + Origin protection, lockout and IP bans, origin classification and trusted proxies, enrollment-only sessions, minimal login and setup pages |
+
+**First action on a networked machine:** run `make deps` (it runs `go mod tidy`, which resolves `golang.org/x/crypto`, `golang.org/x/text`, `gopkg.in/yaml.v3`, `modernc.org/sqlite` and writes `go.sum`) and commit `go.mod`/`go.sum`; CI fails until then.
+
+**Spikes:** S-1 (Argon2id ✅; WebAuthn in the helper pending), S-5 (ACME in a NAT/CGNAT-less lab with Pebble).
 **DoD:** all acceptance criteria of [AUTHENTICATION §11](AUTHENTICATION.md#11-acceptance-criteria-phase-1b1c) and [REMOTE-ACCESS §9](REMOTE-ACCESS.md#9-test-plan-phase-1d) pass; a real browser signs in with a passkey and with password + TOTP + trusted device in the VM lab; unprivileged daemon verified (`ps`, capabilities, cannot read `/var/lib/yubeos-priv`); axe scan clean; priv hostile-input suite green; independent security review of the auth flow (CODE-REVIEW §1) before tagging.
 **Risks:** WebAuthn library surface in a root process → helper has no network and a seccomp filter, library pinned and fuzzed; passkey RP-ID/hostname coupling → documented, tested with hostname change; Argon2id too slow on weak NAS CPUs → calibration at install.
 

@@ -1,0 +1,27 @@
+# /etc/yubeos/config.yaml — every key is optional; omitted keys use the defaults shown in docs/ARCHITECTURE.md §11.
+# Unknown keys are rejected at start-up. Check with:  sudo yubeosctl doctor
+
+server:
+  listen: ":443"
+  httpRedirect: ":80"          # optional convenience; failure to bind never stops HTTPS
+  exposure: lan                # lan | remote  (remote enforces extra rules: docs/REMOTE-ACCESS.md)
+  allowedHosts: []             # hostnames/IPs you use to reach Yubeos; required when exposure=remote
+  tls:
+    mode: selfsigned           # selfsigned | files   (acme is planned)
+    # certFile: /etc/yubeos/tls/fullchain.pem
+    # keyFile:  /etc/yubeos/tls/privkey.pem
+
+auth:
+  require2fa: admins           # none | admins | all   (remote origins always need a second factor)
+  lockoutThreshold: 10
+  lockoutMinutes: 15
+  sessionIdleMinutes: 30
+  remoteIdleMinutes: 15
+  sessionMaxHours: 12
+
+# access:
+#   allowCidrs: ["203.0.113.0/24"]   # optional allow-list applied to REMOTE origins only
+
+logging:
+  level: info
+  format: json

@@ -19,10 +19,13 @@ servers:
       default: localhost:8443
 security:
 - sessionCookie: []
+- bearerToken: []
 tags:
 - name: system
 - name: auth
 - name: jobs
+- name: security
+- name: audit
 paths:
   /healthz:
     get:
@@ -42,6 +45,14 @@ paths:
                 properties:
                   ok:
                     type: boolean
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      description: Served at the server root (not under /api/v1).
+    servers:
+    - url: https://{host}
+      variables:
+        host:
+          default: localhost:8443
   /system/info:
     get:
       tags:
@@ -56,6 +67,8 @@ paths:
                 $ref: '#/components/schemas/SystemInfo'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /auth/login:
     post:
       tags:
@@ -85,6 +98,10 @@ paths:
           $ref: '#/components/responses/Problem'
         '429':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
   /auth/me:
     get:
       tags:
@@ -99,6 +116,12 @@ paths:
                 $ref: '#/components/schemas/Me'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /jobs/{id}:
     get:
       tags:
@@ -119,6 +142,8 @@ paths:
                 $ref: '#/components/schemas/Job'
         '404':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /auth/2fa/verify:
     post:
       tags:
@@ -129,6 +154,12 @@ paths:
           description: OK
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       requestBody:
         required: true
         content:
@@ -144,8 +175,18 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebAuthnOptions'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       security: []
   /auth/webauthn/login/finish:
     post:
@@ -155,9 +196,25 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebAuthnAssertion'
   /auth/webauthn/register/begin:
     post:
       tags:
@@ -166,8 +223,18 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebAuthnOptions'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /auth/webauthn/register/finish:
     post:
       tags:
@@ -178,6 +245,18 @@ paths:
           description: OK
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebAuthnAssertion'
   /auth/totp/enroll:
     post:
       tags:
@@ -186,8 +265,18 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotpEnrollResponse'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /auth/totp/confirm:
     post:
       tags:
@@ -196,8 +285,18 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoveryCodes'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       requestBody:
         required: true
         content:
@@ -214,6 +313,12 @@ paths:
           description: OK
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       requestBody:
         required: true
         content:
@@ -230,6 +335,12 @@ paths:
           description: OK
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       requestBody:
         required: true
         content:
@@ -244,8 +355,18 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceList'
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /auth/devices/{id}:
     delete:
       tags:
@@ -256,6 +377,12 @@ paths:
           description: OK
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -272,6 +399,246 @@ paths:
           description: OK
         '401':
           $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/logout:
+    post:
+      tags:
+      - auth
+      summary: End the current session
+      responses:
+        '204':
+          description: Signed out
+        '401':
+          $ref: '#/components/responses/Problem'
+  /auth/setup:
+    post:
+      tags:
+      - auth
+      summary: 'Consume a one-time setup link (local origin only): set the first password'
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Problem'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupRequest'
+  /auth/tokens:
+    get:
+      tags:
+      - auth
+      summary: List own API tokens
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiToken'
+        '401':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - auth
+      summary: Create an API token (step-up required; token shown once)
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiTokenCreated'
+        '401':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiTokenCreate'
+  /auth/tokens/{id}:
+    delete:
+      tags:
+      - auth
+      summary: Revoke an API token
+      responses:
+        '204':
+          description: Revoked
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+  /auth/recovery-codes:regenerate:
+    post:
+      tags:
+      - auth
+      summary: Regenerate recovery codes (step-up; invalidates old codes)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoveryCodes'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /auth/totp:
+    delete:
+      tags:
+      - auth
+      summary: Remove TOTP (step-up)
+      responses:
+        '204':
+          description: Removed
+        '401':
+          $ref: '#/components/responses/Problem'
+  /auth/webauthn/{id}:
+    delete:
+      tags:
+      - auth
+      summary: Remove a passkey (step-up)
+      responses:
+        '204':
+          description: Removed
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+  /security/remote-status:
+    get:
+      tags:
+      - security
+      summary: Remote-access readiness checklist (admin)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteStatus'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /security/lockdown:
+    post:
+      tags:
+      - security
+      summary: Deny all remote origins immediately (admin, step-up)
+      responses:
+        '204':
+          description: Applied
+        '401':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LockdownRequest'
+  /jobs:
+    get:
+      tags:
+      - jobs
+      summary: List jobs
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobList'
+        '401':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+      - name: cursor
+        in: query
+        schema:
+          type: string
+  /jobs/{id}/cancel:
+    post:
+      tags:
+      - jobs
+      summary: Request cancellation of a job
+      responses:
+        '202':
+          description: Cancellation requested
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+  /audit:
+    get:
+      tags:
+      - audit
+      summary: Audit log (admin); format=ndjson for export
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditPage'
+        '401':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+      - name: to
+        in: query
+        schema:
+          type: string
+      - name: actor
+        in: query
+        schema:
+          type: string
+      - name: action
+        in: query
+        schema:
+          type: string
+      - name: format
+        in: query
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        schema:
+          type: string
 components:
   securitySchemes:
     sessionCookie:
@@ -286,6 +653,24 @@ components:
   responses:
     Problem:
       description: RFC 9457 problem details
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: Forbidden (role, step-up required, or origin policy)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Invalid:
+      description: Validation error (see errors[])
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    RateLimited:
+      description: Too many requests / locked out / IP banned
       content:
         application/problem+json:
           schema:
@@ -321,6 +706,9 @@ components:
                 type: string
               message:
                 type: string
+        requestId:
+          type: string
+          description: Mirrors the X-Request-Id response header
     LoginRequest:
       type: object
       required:
@@ -369,6 +757,9 @@ components:
         remoteSession:
           type: boolean
           description: Session originates from a non-local address
+        enrollmentRequired:
+          type: boolean
+          description: Session may only enrol a second factor (policy requires one and none is set up)
     SystemInfo:
       type: object
       required:
@@ -504,3 +895,257 @@ components:
           type: string
           minLength: 12
           maxLength: 1024
+    TotpEnrollResponse:
+      type: object
+      required:
+      - secret
+      - otpauthUri
+      properties:
+        secret:
+          type: string
+        otpauthUri:
+          type: string
+    RecoveryCodes:
+      type: object
+      required:
+      - codes
+      properties:
+        codes:
+          type: array
+          items:
+            type: string
+          minItems: 10
+          maxItems: 10
+    Device:
+      type: object
+      required:
+      - id
+      - kind
+      - label
+      - createdAt
+      - lastUsedAt
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum:
+          - trusted-device
+          - session
+        label:
+          type: string
+        browser:
+          type: string
+        os:
+          type: string
+        lastIp:
+          type: string
+        current:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    DeviceList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+    ApiToken:
+      type: object
+      required:
+      - id
+      - name
+      - scopes
+      - expiresAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+            enum:
+            - read
+            - files
+            - admin
+        expiresAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+    ApiTokenCreate:
+      type: object
+      required:
+      - name
+      - scopes
+      - expiresInDays
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 60
+        scopes:
+          type: array
+          items:
+            type: string
+            enum:
+            - read
+            - files
+            - admin
+          minItems: 1
+        expiresInDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+    ApiTokenCreated:
+      allOf:
+      - $ref: '#/components/schemas/ApiToken'
+      - type: object
+        required:
+        - token
+        properties:
+          token:
+            type: string
+            description: Shown once
+    SetupRequest:
+      type: object
+      required:
+      - token
+      - newPassword
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+          minLength: 12
+          maxLength: 1024
+    RemoteStatus:
+      type: object
+      required:
+      - exposure
+      - checks
+      properties:
+        exposure:
+          type: string
+          enum:
+          - lan
+          - remote
+        lockdown:
+          type: boolean
+        checks:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - status
+            - title
+            properties:
+              id:
+                type: string
+              status:
+                type: string
+                enum:
+                - ok
+                - warn
+                - fail
+              title:
+                type: string
+              detail:
+                type: string
+    LockdownRequest:
+      type: object
+      required:
+      - enabled
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+    JobList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    AuditEntry:
+      type: object
+      required:
+      - id
+      - ts
+      - action
+      - result
+      properties:
+        id:
+          type: integer
+        ts:
+          type: string
+          format: date-time
+        actor:
+          type: string
+        role:
+          type: string
+        ip:
+          type: string
+        reqId:
+          type: string
+        action:
+          type: string
+        target:
+          type: string
+        result:
+          type: string
+          enum:
+          - ok
+          - fail
+          - denied
+    AuditPage:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    WebAuthnOptions:
+      type: object
+      description: WebAuthn PublicKeyCredential{Creation,Request}Options as produced by the server library
+      additionalProperties: true
+    WebAuthnAssertion:
+      type: object
+      description: Browser PublicKeyCredential JSON (attestation or assertion)
+      additionalProperties: true
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 80
+      description: De-duplicates retried POSTs for 24 h

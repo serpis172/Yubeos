@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Liveness probe */
+        /**
+         * Liveness probe
+         * @description Served at the server root (not under /api/v1).
+         */
         get: {
             parameters: {
                 query?: never;
@@ -32,6 +35,7 @@ export interface paths {
                         };
                     };
                 };
+                403: components["responses"]["Forbidden"];
             };
         };
         put?: never;
@@ -69,6 +73,7 @@ export interface paths {
                     };
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
             };
         };
         put?: never;
@@ -121,6 +126,8 @@ export interface paths {
                     };
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
                 429: components["responses"]["Problem"];
             };
         };
@@ -157,6 +164,9 @@ export interface paths {
                     };
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         put?: never;
@@ -195,6 +205,7 @@ export interface paths {
                         "application/json": components["schemas"]["Job"];
                     };
                 };
+                403: components["responses"]["Forbidden"];
                 404: components["responses"]["Problem"];
             };
         };
@@ -237,6 +248,9 @@ export interface paths {
                     content?: never;
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         delete?: never;
@@ -269,9 +283,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["WebAuthnOptions"];
+                    };
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         delete?: never;
@@ -297,16 +316,25 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WebAuthnAssertion"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Me"];
+                    };
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         delete?: never;
@@ -339,9 +367,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["WebAuthnOptions"];
+                    };
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         delete?: never;
@@ -367,7 +400,11 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WebAuthnAssertion"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -377,6 +414,9 @@ export interface paths {
                     content?: never;
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         delete?: never;
@@ -409,9 +449,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["TotpEnrollResponse"];
+                    };
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         delete?: never;
@@ -448,9 +493,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["RecoveryCodes"];
+                    };
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         delete?: never;
@@ -490,6 +540,9 @@ export interface paths {
                     content?: never;
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         delete?: never;
@@ -528,6 +581,9 @@ export interface paths {
                     content?: never;
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         post?: never;
@@ -559,9 +615,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["DeviceList"];
+                    };
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         put?: never;
@@ -602,6 +663,9 @@ export interface paths {
                     content?: never;
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
         options?: never;
@@ -636,8 +700,493 @@ export interface paths {
                     content?: never;
                 };
                 401: components["responses"]["Problem"];
+                403: components["responses"]["Forbidden"];
+                422: components["responses"]["Invalid"];
+                429: components["responses"]["RateLimited"];
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End the current session */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Signed out */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Consume a one-time setup link (local origin only): set the first password */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetupRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List own API tokens */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiToken"][];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        /** Create an API token (step-up required; token shown once) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ApiTokenCreate"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiTokenCreated"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke an API token */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Revoked */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/recovery-codes:regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Regenerate recovery codes (step-up; invalidates old codes) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecoveryCodes"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove TOTP (step-up) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removed */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/webauthn/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a passkey (step-up) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removed */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/security/remote-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Remote-access readiness checklist (admin) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RemoteStatus"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/security/lockdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deny all remote origins immediately (admin, step-up) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LockdownRequest"];
+                };
+            };
+            responses: {
+                /** @description Applied */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List jobs */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JobList"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request cancellation of a job */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cancellation requested */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Audit log (admin); format=ndjson for export */
+        get: {
+            parameters: {
+                query?: {
+                    from?: string;
+                    to?: string;
+                    actor?: string;
+                    action?: string;
+                    format?: string;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuditPage"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -659,6 +1208,8 @@ export interface components {
                 pointer: string;
                 message: string;
             }[];
+            /** @description Mirrors the X-Request-Id response header */
+            requestId?: string;
         };
         LoginRequest: {
             username: string;
@@ -676,6 +1227,8 @@ export interface components {
             trustedDevice?: boolean;
             /** @description Session originates from a non-local address */
             remoteSession?: boolean;
+            /** @description Session may only enrol a second factor (policy requires one and none is set up) */
+            enrollmentRequired?: boolean;
         };
         SystemInfo: {
             hostname: string;
@@ -731,6 +1284,98 @@ export interface components {
             currentPassword: string;
             newPassword: string;
         };
+        TotpEnrollResponse: {
+            secret: string;
+            otpauthUri: string;
+        };
+        RecoveryCodes: {
+            codes: string[];
+        };
+        Device: {
+            id: string;
+            /** @enum {string} */
+            kind: "trusted-device" | "session";
+            label: string;
+            browser?: string;
+            os?: string;
+            lastIp?: string;
+            current?: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastUsedAt: string;
+            /** Format: date-time */
+            expiresAt?: string;
+        };
+        DeviceList: {
+            items: components["schemas"]["Device"][];
+        };
+        ApiToken: {
+            id: string;
+            name: string;
+            scopes: ("read" | "files" | "admin")[];
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            lastUsedAt?: string;
+        };
+        ApiTokenCreate: {
+            name: string;
+            scopes: ("read" | "files" | "admin")[];
+            expiresInDays: number;
+        };
+        ApiTokenCreated: components["schemas"]["ApiToken"] & {
+            /** @description Shown once */
+            token: string;
+        };
+        SetupRequest: {
+            token: string;
+            newPassword: string;
+        };
+        RemoteStatus: {
+            /** @enum {string} */
+            exposure: "lan" | "remote";
+            lockdown?: boolean;
+            checks: {
+                id: string;
+                /** @enum {string} */
+                status: "ok" | "warn" | "fail";
+                title: string;
+                detail?: string;
+            }[];
+        };
+        LockdownRequest: {
+            enabled: boolean;
+        };
+        JobList: {
+            items: components["schemas"]["Job"][];
+            nextCursor?: string | null;
+        };
+        AuditEntry: {
+            id: number;
+            /** Format: date-time */
+            ts: string;
+            actor?: string;
+            role?: string;
+            ip?: string;
+            reqId?: string;
+            action: string;
+            target?: string;
+            /** @enum {string} */
+            result: "ok" | "fail" | "denied";
+        };
+        AuditPage: {
+            items: components["schemas"]["AuditEntry"][];
+            nextCursor?: string | null;
+        };
+        /** @description WebAuthn PublicKeyCredential{Creation,Request}Options as produced by the server library */
+        WebAuthnOptions: {
+            [key: string]: unknown;
+        };
+        /** @description Browser PublicKeyCredential JSON (attestation or assertion) */
+        WebAuthnAssertion: {
+            [key: string]: unknown;
+        };
     };
     responses: {
         /** @description RFC 9457 problem details */
@@ -742,8 +1387,38 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description Forbidden (role, step-up required, or origin policy) */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Validation error (see errors[]) */
+        Invalid: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Too many requests / locked out / IP banned */
+        RateLimited: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
-    parameters: never;
+    parameters: {
+        /** @description De-duplicates retried POSTs for 24 h */
+        IdempotencyKey: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;

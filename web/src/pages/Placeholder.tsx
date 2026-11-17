@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { allNavItems } from "../shell/nav";
 import styles from "../shell/Shell.module.css";
@@ -6,6 +7,9 @@ import styles from "../shell/Shell.module.css";
 export function Placeholder() {
   const { pathname } = useLocation();
   const item = allNavItems.find((i) => i.to === pathname);
+  useEffect(() => {
+    document.title = item ? `${item.label} · Yubeos` : "Not found · Yubeos";
+  }, [item]);
   return (
     <section className={styles.card}>
       <h1>{item?.label ?? "Not found"}</h1>

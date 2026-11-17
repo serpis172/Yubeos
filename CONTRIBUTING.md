@@ -21,4 +21,4 @@ Thanks for helping. The project is contract-first and phase-driven; read [ARCHIT
 
 ## Sign-off
 
-Contributions are accepted under the project license with a DCO sign-off (`git commit -s`).
+Contributions are accepted under the project license with a DCO sign-off (`git commit -s`); CI fails a pull request if any commit lacks a `Signed-off-by:` line. Maintainers: run `scripts/pin-actions.sh` (needs network) to pin GitHub Actions to commit SHAs.

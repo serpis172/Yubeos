@@ -2,10 +2,12 @@
 // Only src/theme/*.css (the token definitions) may use hex/rgb()/hsl().
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("../web/src", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../web/src", import.meta.url));
 const allowed = (p) => p.split(sep).includes("theme") || p.endsWith(".gen.ts") || p.includes(".test.");
-const pattern = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/;
+// 3/4/6/8-digit hex not preceded by a word char or '&' (HTML entities, issue refs like "(#123)" still match: use words instead)
+const pattern = /(?<![\w&])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b|\brgba?\(|\bhsla?\(/;
 let bad = 0;
 
 function walk(dir) {

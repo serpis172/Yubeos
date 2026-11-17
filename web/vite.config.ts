@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 // Dev: `make demo` runs yubeosd --demo --no-tls on :8443; Vite proxies API + WebSockets to it.
-const backend = process.env.YUBEOS_BACKEND ?? "http://localhost:8443";
+const backend = process.env.YUBEOS_BACKEND ?? "http://127.0.0.1:8443";
 
 export default defineConfig({
   plugins: [react()],

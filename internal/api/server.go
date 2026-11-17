@@ -6,10 +6,13 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
+	"github.com/serpis172/Yubeos/internal/auth"
 	"github.com/serpis172/Yubeos/internal/clock"
 	"github.com/serpis172/Yubeos/internal/config"
+	"github.com/serpis172/Yubeos/internal/netx"
 	"github.com/serpis172/Yubeos/internal/problem"
 )
 
@@ -19,14 +22,27 @@ type Options struct {
 	Log    *slog.Logger
 	Clock  clock.Clock
 	Demo   bool
-	UI     fs.FS // embedded web build; may be empty
+	UI     fs.FS            // embedded web build; may be empty
+	Auth   *auth.Service    // nil: every authenticated route answers 401 (no login configured)
+	Net    *netx.Classifier // client IP / origin classification (default: no trusted proxies)
+	// HostFacts overrides host probing (tests). Default: real probing, cached for factsTTL.
+	HostFacts func() hostFacts
 }
 
 // Server holds shared state for handlers.
 type Server struct {
 	opts  Options
 	start time.Time
+	cls   *netx.Classifier
+
+	factsMu  sync.Mutex
+	facts    hostFacts
+	factsAt  time.Time
+	factsSet bool
 }
+
+// factsTTL bounds how often the host is probed (exec.LookPath x N, /etc/os-release, kernel) per process.
+const factsTTL = 30 * time.Second
 
 // New returns the fully wired http.Handler.
 func New(o Options) http.Handler {
@@ -36,11 +52,15 @@ func New(o Options) http.Handler {
 	if o.Clock == nil {
 		o.Clock = clock.Real{}
 	}
-	s := &Server{opts: o, start: o.Clock.Now()}
+	if o.Net == nil {
+		o.Net = &netx.Classifier{}
+	}
+	s := &Server{opts: o, start: o.Clock.Now(), cls: o.Net}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.healthz)
 	mux.Handle("GET /api/v1/system/info", s.require(RoleUser, s.systemInfo))
+	s.registerAuthRoutes(mux)
 	// Anything else under /api/ or /ws/ is a JSON 404, never the SPA shell.
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { problem.NotFound(w, r) })
 	mux.HandleFunc("/ws/", func(w http.ResponseWriter, r *http.Request) { problem.NotFound(w, r) })
@@ -51,7 +71,11 @@ func New(o Options) http.Handler {
 		accessLog(o.Log),
 		recoverer(o.Log),
 		securityHeaders,
+		accessGuard(o.Net),
+		hsts(o.Config.Server.Exposure == "remote"),
 		hostGuard(o.Config.Server.AllowedHosts),
+		limitBody,
+		gzipMW,
 	)
 }
 
@@ -66,5 +90,21 @@ func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) systemInfo(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, collectSystemInfo(s.opts.Demo, s.opts.Clock.Now(), s.start))
+	now := s.opts.Clock.Now()
+	writeJSON(w, http.StatusOK, buildSystemInfo(s.opts.Demo, s.cachedFacts(now), now, s.start))
+}
+
+// cachedFacts returns host facts, probing at most once per factsTTL.
+func (s *Server) cachedFacts(now time.Time) hostFacts {
+	s.factsMu.Lock()
+	defer s.factsMu.Unlock()
+	if s.factsSet && now.Sub(s.factsAt) < factsTTL {
+		return s.facts
+	}
+	probe := s.opts.HostFacts
+	if probe == nil {
+		probe = func() hostFacts { return readHostFacts(s.opts.Demo) }
+	}
+	s.facts, s.factsAt, s.factsSet = probe(), now, true
+	return s.facts
 }

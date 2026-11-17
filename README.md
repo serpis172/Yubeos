@@ -2,7 +2,7 @@
 
 > A web-managed homelab / NAS / home-server platform for Linux — a TrueNAS-style control plane that runs on top of a stock Ubuntu Server or Debian install.
 
-**Status:** `pre-alpha` — Phase 0 (foundations) implemented; sections are placeholders until their phase. See [ROADMAP](docs/ROADMAP.md).
+**Status:** `pre-alpha` — Phases 0, 1a and 1b implemented (daemon, root helper, accounts, login, sessions, lockout); dashboard, files, storage, terminal, add-ons and Repo-Papers are placeholders until their phase. See [ROADMAP](docs/ROADMAP.md).
 
 ---
 
@@ -63,11 +63,12 @@ sudo yubeosctl user add <linux-user> --admin    # prints a one-time setup link: 
 
 ```bash
 git clone https://github.com/serpis172/Yubeos && cd Yubeos
-make deps && make demo     # https://localhost:8443 (self-signed certificate, mock hardware, NO authentication)
+make deps && make demo     # https://127.0.0.1:8443 — loopback only, self-signed certificate, mock hardware, NO authentication
+make dev                   # hot reload: backend (plain HTTP) + Vite on http://localhost:5173
 make test lint             # Go (race) + web tests, vet, tsc, eslint, schema checks
 ```
 
-Needs Go ≥ 1.22 and Node ≥ 22. Only the shell, `/healthz` and `/api/v1/system/info` exist so far; each section shows the roadmap phase that delivers it. See [Development](docs/DEVELOPMENT.md).
+Needs Go ≥ 1.22 and Node ≥ 22. `--demo` refuses non-loopback addresses unless you pass `--allow-demo-public` (it has no login). Only the shell, `/healthz` and `/api/v1/system/info` exist so far; each section shows the roadmap phase that delivers it. See [Development](docs/DEVELOPMENT.md).
 
 ## License
 

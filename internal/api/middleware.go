@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -67,6 +68,21 @@ func (s *statusRecorder) Write(p []byte) (int, error) {
 	return n, err
 }
 
+// ReadFrom keeps the zero-copy path (sendfile) of the underlying writer for large static files.
+func (s *statusRecorder) ReadFrom(r io.Reader) (int64, error) {
+	if s.status == 0 {
+		s.status = http.StatusOK
+	}
+	if rf, ok := s.ResponseWriter.(io.ReaderFrom); ok {
+		n, err := rf.ReadFrom(r)
+		s.bytes += n
+		return n, err
+	}
+	n, err := io.Copy(struct{ io.Writer }{s.ResponseWriter}, r)
+	s.bytes += n
+	return n, err
+}
+
 // Unwrap lets http.ResponseController reach Flusher/Hijacker (needed for WebSockets later).
 func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
 
@@ -81,7 +97,7 @@ func accessLog(log *slog.Logger) func(http.Handler) http.Handler {
 				lvl = slog.LevelDebug // keep the default log quiet
 			}
 			log.Log(r.Context(), lvl, "http",
-				"reqId", RequestID(r.Context()), "method", r.Method, "path", r.URL.Path,
+				"reqId", RequestID(r.Context()), "remote", r.RemoteAddr, "method", r.Method, "path", r.URL.Path,
 				"status", rec.status, "bytes", rec.bytes, "ms", time.Since(start).Milliseconds())
 		})
 	}
@@ -90,20 +106,24 @@ func accessLog(log *slog.Logger) func(http.Handler) http.Handler {
 func recoverer(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rec := &statusRecorder{ResponseWriter: w}
 			defer func() {
 				if v := recover(); v != nil {
 					log.Error("panic", "reqId", RequestID(r.Context()), "value", v, "stack", string(debug.Stack()))
-					problem.Internal(w, r)
+					if rec.status == 0 { // headers not sent yet: a clean 500 is still possible
+						problem.Internal(w, r)
+					}
 				}
 			}()
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(rec, r)
 		})
 	}
 }
 
 // csp mirrors docs/SECURITY.md §8. style-src 'unsafe-inline' is tracked as TD-001.
+// connect-src 'self' also covers same-origin WebSockets; a bare "wss:" would allow exfiltration to any host.
 const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
-	"font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+	"font-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -111,8 +131,9 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("Content-Security-Policy", csp)
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
-		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), usb=(), serial=(), payment=(), bluetooth=()")
 		h.Set("Cross-Origin-Opener-Policy", "same-origin")
+		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			h.Set("Cache-Control", "no-store")
 		}

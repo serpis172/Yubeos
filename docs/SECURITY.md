@@ -101,7 +101,7 @@ ConfigurationDirectory=yubeos
 # PrivateDevices intentionally omitted: GPU collectors read /dev/nvidia*
 ```
 
-`yubeos-priv.service`: runs as root with a **reduced capability bounding set** (`CAP_SYS_ADMIN`, `CAP_CHOWN`, `CAP_DAC_OVERRIDE`, `CAP_FOWNER`, `CAP_SETUID`, `CAP_SETGID`, `CAP_KILL`, `CAP_SYS_RESOURCE`), `IPAddressDeny=any` (no network), `RestrictAddressFamilies=AF_UNIX AF_NETLINK`, `ProtectHome=read-only`, `PrivateTmp=yes`. `NoNewPrivileges` is **not** set on the helper **because user terminals must be able to `sudo`**; therefore terminal sessions are *not* spawned as children of the helper's sandbox but as transient systemd units ([terminal](modules/terminal.md), [ADR-0014](adr/0014-terminal-spawn.md)).
+`yubeos-priv.service` (a `SystemCallFilter` is **not** applied until validated together with `systemd-run` terminals — spike S-3; tracked as TD-014): runs as root with a **reduced capability bounding set** (`CAP_SYS_ADMIN`, `CAP_CHOWN`, `CAP_DAC_OVERRIDE`, `CAP_FOWNER`, `CAP_SETUID`, `CAP_SETGID`, `CAP_KILL`, `CAP_SYS_RESOURCE`), `IPAddressDeny=any` (no network), `RestrictAddressFamilies=AF_UNIX AF_NETLINK`, `ProtectHome=read-only`, `PrivateTmp=yes`. `NoNewPrivileges` is **not** set on the helper **because user terminals must be able to `sudo`**; therefore terminal sessions are *not* spawned as children of the helper's sandbox but as transient systemd units ([terminal](modules/terminal.md), [ADR-0014](adr/0014-terminal-spawn.md)).
 
 An AppArmor profile for `yubeosd` (deny write outside state/runtime dirs; deny exec except none) ships in `packaging/apparmor/`.
 
@@ -132,7 +132,7 @@ Authorization is enforced in **middleware by route metadata** (`requires: admin|
 | Files | Operations run **as the requesting Linux user** (fs worker with `Credential{uid,gid,groups}`), so kernel permissions apply, not Yubeos logic. Root list (`files.roots`) is a UX boundary and an extra guard, not the only one. Path canonicalisation via `openat2(RESOLVE_BENEATH)` semantics (symlinks not followed by default). Download `Content-Disposition` sanitised; `X-Content-Type-Options: nosniff`; user files are never served inline as HTML (always `attachment`) to prevent stored XSS. |
 | Terminal | Authenticated WS, bound to session; PTY runs as the user in a systemd transient unit; audit of open/close (not keystrokes by default; optional `terminal.recordSessions`). Admin shell ≈ root via sudo — documented, not hidden. |
 | Storage | Disk IDs only; dry-run (`zpool create -n`) preview mandatory before create; boot/OS disk and in-use disks are *refused* for wipe/add; destructive ⇒ step-up. |
-| Add-ons | Manifest schema validation; catalogue signature verification (minisign/cosign) for `official`; unsigned catalogues flagged; image digests pinned (`@sha256`) in first-party manifests; `privileged`, `network_mode: host`, `docker.sock`, `/dev` or host-path mounts outside add-on datasets are **blocked unless the manifest declares them and the admin approves** with a risk dialog. Add-on UIs are proxied under `/addons/<id>/` with a CSP sandbox and without Yubeos cookies forwarded. |
+| Add-ons | Manifest schema validation (no `..` in any path); catalogue signature verification (minisign/cosign) for `official` — **enabled by default, `verify` defaults to true when omitted**; unsigned catalogues flagged; image digests pinned (`@sha256`) in first-party manifests; `privileged`, `network_mode: host`, `docker.sock`, `/dev` or host-path mounts outside add-on datasets are **blocked unless declared and approved** with a risk dialog. **Add-on UIs never share Yubeos' origin or hostname** ([ADR-0018](adr/0018-addon-ui-isolation.md)): isolated subdomain with a scoped ticket, or a direct link on a different hostname; Yubeos cookies are never forwarded. |
 | Repo-Papers | Outbound allow-list per source; response size and time caps; all fetched text rendered as escaped text/Markdown-sanitised, never raw HTML; GitHub token read from `0600` file. |
 | Appearance | Themes are **data only** (validated JSON; hex/rgb colours, font names, numeric ranges). No custom CSS/JS injection in v1; uploaded fonts validated (woff2 magic, ≤ 2 MB) and served with `font-src 'self'`. |
 
@@ -144,11 +144,12 @@ Append-only table `audit_log` (`id, ts, actor, role, ip, reqId, action, target, 
 
 ```
 Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-  img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+  img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
 X-Content-Type-Options: nosniff
 Referrer-Policy: no-referrer
-Permissions-Policy: camera=(), microphone=(), geolocation=()
+Permissions-Policy: camera=(), microphone=(), geolocation=(), usb=(), serial=(), payment=(), bluetooth=()
 Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
 Cache-Control: no-store            (API)   |  immutable, hashed filenames (static)
 ```
 
@@ -165,7 +166,7 @@ In `remote` mode additionally: `Strict-Transport-Security: max-age=31536000; inc
 
 ## 10. Vulnerability disclosure
 
-Report privately through GitHub Security Advisories (`Security → Report a vulnerability`) or `security@serpis172-DOMAIN`. Acknowledgement within 72 h, triage within 7 days, coordinated disclosure target 90 days. Supported versions: latest minor + previous minor after 1.0. Please do not open public issues for vulnerabilities.
+Report privately through GitHub Security Advisories on the repository (`Security → Report a vulnerability`). Acknowledgement within 72 h, triage within 7 days, coordinated disclosure target 90 days. Supported versions: latest minor + previous minor after 1.0. Please do not open public issues for vulnerabilities.
 
 ## 11. Residual risks (accepted, documented)
 

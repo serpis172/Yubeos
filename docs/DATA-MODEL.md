@@ -25,17 +25,29 @@ CREATE TABLE users_meta(            -- Yubeos-side data about a web account (cre
   last_login_at INTEGER, created_at INTEGER NOT NULL);
 
 CREATE TABLE sessions(
-  id_hash BLOB PRIMARY KEY,         -- SHA-256 of session id
+  id_hash BLOB PRIMARY KEY,                 -- SHA-256 of the cookie value
+  sid TEXT NOT NULL UNIQUE,                 -- public identifier used by the UI/API for listing and revocation
   username TEXT NOT NULL REFERENCES users_meta(username) ON DELETE CASCADE,
-  csrf TEXT NOT NULL, ip TEXT, user_agent TEXT,
-  created_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, reauth_until INTEGER,
-  origin TEXT NOT NULL CHECK(origin IN ('local','remote')), device_id TEXT REFERENCES trusted_devices(id) ON DELETE SET NULL,
-  factors TEXT NOT NULL DEFAULT '[]');
+  csrf TEXT NOT NULL,
+  ip TEXT, user_agent TEXT,
+  origin TEXT NOT NULL CHECK(origin IN ('local','remote')),
+  factors TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(factors)),
+  enrollment_required INTEGER NOT NULL DEFAULT 0,
+  cred_epoch INTEGER NOT NULL DEFAULT 0,    -- credential epoch at login; a bump in the helper store kills the session
+  device_id TEXT REFERENCES trusted_devices(id) ON DELETE SET NULL,
+  created_at INTEGER NOT NULL,
+  rotated_at INTEGER NOT NULL,
+  last_seen_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  prev_id_hash BLOB,                        -- accepted briefly after rotation (parallel requests)
+  prev_valid_until INTEGER,
+  reauth_until INTEGER);
 CREATE INDEX idx_sessions_user ON sessions(username);
+CREATE INDEX idx_sessions_prev ON sessions(prev_id_hash);
 
 CREATE TABLE trusted_devices(
   id TEXT PRIMARY KEY, username TEXT NOT NULL REFERENCES users_meta(username) ON DELETE CASCADE,
-  token_hash BLOB NOT NULL UNIQUE, prev_token_hash BLOB,            -- prev kept 10 min to detect reuse of a rotated token
+  token_hash BLOB NOT NULL UNIQUE, prev_token_hash BLOB, prev_valid_until INTEGER, -- previous token kept until next rotation + 24 h to detect reuse
   label TEXT NOT NULL, ua_family TEXT, ua_major INTEGER, os_family TEXT,
   created_at INTEGER NOT NULL, last_used_at INTEGER NOT NULL, last_ip TEXT, last_2fa_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL, revoked_at INTEGER, revoke_reason TEXT);
@@ -46,11 +58,11 @@ CREATE INDEX idx_failures_ip ON login_failures(ip, ts);
 CREATE INDEX idx_failures_user ON login_failures(username, ts);
 CREATE TABLE ip_bans(ip TEXT PRIMARY KEY, until INTEGER NOT NULL, strikes INTEGER NOT NULL DEFAULT 1, reason TEXT);
 CREATE TABLE auth_challenges(id_hash BLOB PRIMARY KEY, username TEXT NOT NULL, ip_prefix TEXT, ua_family TEXT, attempts INTEGER NOT NULL DEFAULT 0, expires_at INTEGER NOT NULL);
-CREATE TABLE setup_links(token_hash BLOB PRIMARY KEY, username TEXT NOT NULL, purpose TEXT NOT NULL, expires_at INTEGER NOT NULL, used_at INTEGER);
+-- setup_links live in the helper store (see below), not here
 
 CREATE TABLE api_tokens(
   id TEXT PRIMARY KEY, username TEXT NOT NULL REFERENCES users_meta(username) ON DELETE CASCADE,
-  name TEXT NOT NULL, token_hash BLOB NOT NULL UNIQUE, scopes TEXT NOT NULL,
+  name TEXT NOT NULL, token_hash BLOB NOT NULL UNIQUE, scopes TEXT NOT NULL CHECK(json_valid(scopes)),
   created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, last_used_at INTEGER);
 
 CREATE TABLE audit_log(
@@ -62,7 +74,7 @@ CREATE INDEX idx_audit_ts ON audit_log(ts);
 CREATE TABLE jobs(
   id TEXT PRIMARY KEY, kind TEXT NOT NULL, actor TEXT NOT NULL,
   state TEXT NOT NULL CHECK(state IN ('queued','running','succeeded','failed','cancelled')),
-  params TEXT, progress REAL NOT NULL DEFAULT 0, message TEXT, log_tail TEXT, error TEXT,
+  params TEXT CHECK(params IS NULL OR json_valid(params)), progress REAL NOT NULL DEFAULT 0, message TEXT, log_tail TEXT, error TEXT,
   created_at INTEGER NOT NULL, started_at INTEGER, finished_at INTEGER);
 CREATE INDEX idx_jobs_state ON jobs(state, created_at);
 
@@ -90,7 +102,7 @@ CREATE TABLE rp_topics(id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, spec TEXT
 CREATE TABLE rp_repos(id INTEGER PRIMARY KEY /* GitHub node db id */, full_name TEXT NOT NULL, description TEXT, language TEXT, license TEXT, topics TEXT, created_at INTEGER, pushed_at INTEGER, archived INTEGER, fork INTEGER, stars INTEGER, forks INTEGER, fetched_at INTEGER NOT NULL);
 CREATE TABLE rp_repo_snapshots(repo_id INTEGER NOT NULL REFERENCES rp_repos(id) ON DELETE CASCADE, day TEXT NOT NULL /* YYYY-MM-DD */, stars INTEGER NOT NULL, forks INTEGER NOT NULL, open_issues INTEGER, pushed_at INTEGER, PRIMARY KEY(repo_id, day)) WITHOUT ROWID;
 CREATE TABLE rp_papers(id TEXT PRIMARY KEY /* arxiv:2401.01234 or doi:… */, title TEXT NOT NULL, authors TEXT, abstract TEXT, categories TEXT, venue TEXT, tier TEXT CHECK(tier IN ('T1','T2','T3')), published_at INTEGER NOT NULL, hf_upvotes INTEGER, citations INTEGER, influential_citations INTEGER, linked_repo TEXT, urls TEXT, fetched_at INTEGER NOT NULL);
-CREATE TABLE rp_user_state(username TEXT NOT NULL, item_kind TEXT NOT NULL CHECK(item_kind IN ('repo','paper')), item_id TEXT NOT NULL, saved INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, read INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(username, item_kind, item_id));
+CREATE TABLE rp_user_state(username TEXT NOT NULL REFERENCES users_meta(username) ON DELETE CASCADE, item_kind TEXT NOT NULL CHECK(item_kind IN ('repo','paper')), item_id TEXT NOT NULL, saved INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, read INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(username, item_kind, item_id));
 CREATE TABLE rp_source_state(source TEXT PRIMARY KEY, etag TEXT, last_ok_at INTEGER, last_error TEXT, rate_remaining INTEGER, rate_reset_at INTEGER);
 
 -- appearance
@@ -98,6 +110,15 @@ CREATE TABLE themes(id TEXT PRIMARY KEY, owner TEXT, name TEXT NOT NULL, data TE
 CREATE TABLE ui_preferences(username TEXT PRIMARY KEY, data TEXT NOT NULL CHECK(json_valid(data)), version INTEGER NOT NULL DEFAULT 1, updated_at INTEGER NOT NULL);
 CREATE TABLE fonts(id TEXT PRIMARY KEY, family TEXT NOT NULL, file TEXT NOT NULL, sha256 BLOB NOT NULL, size INTEGER NOT NULL, uploaded_by TEXT, uploaded_at INTEGER NOT NULL);
 ```
+
+### 2.1 Helper store (`/var/lib/yubeos-priv/credentials.db`, root `0600`, never readable by `yubeosd`)
+
+Source of truth: `internal/privd/credstore/migrations/`. Tables: `settings` (calibrated Argon2id parameters), `credentials`
+(`username`, PHC hash over `HMAC-SHA256(pepper, NFKC(password))`, `epoch`, `pending_reset`), `setup_links` (SHA-256 of the
+token, purpose, expiry, `used_at`). The pepper is the 32-byte file `pepper.key` (`0600`) next to it. TOTP secrets, passkey
+public keys and recovery-code hashes join this store in Phase 1c.
+
+The core daemon tables above are generated from `internal/db/migrations/0001_init.sql`, which is authoritative when they differ.
 
 ## 3. Retention
 

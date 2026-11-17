@@ -1,0 +1,9 @@
+[yubeos]
+enabled   = true
+filter    = yubeos
+backend   = systemd
+journalmatch = _SYSTEMD_UNIT=yubeosd.service
+port      = http,https
+maxretry  = 10
+findtime  = 10m
+bantime   = 1h

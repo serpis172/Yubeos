@@ -1,13 +1,10 @@
 // Package config loads, overrides and validates the Yubeos configuration.
 //
 // Precedence (low → high): built-in defaults < config file < YUBEOS_* environment < command-line flags.
-// The file format is JSON (a strict YAML subset, so existing files stay valid when the YAML loader
-// lands — see docs/engineering/TECH-DEBT.md TD-009). Unknown keys are rejected.
+// The file may be YAML or JSON (JSON is detected by a leading "{"); unknown keys are rejected in both.
 package config
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -92,16 +89,22 @@ type Terminal struct {
 }
 
 type Addons struct {
-	Enabled   bool      `json:"enabled"`
-	PortRange string    `json:"portRange"`
-	Catalogs  []Catalog `json:"catalogs"`
+	Enabled    bool      `json:"enabled"`
+	PortRange  string    `json:"portRange"`
+	BaseDomain string    `json:"baseDomain"` // isolated origin for add-on UIs: <id>.<baseDomain> (ADR-0018)
+	Catalogs   []Catalog `json:"catalogs"`
 }
 
 type Catalog struct {
-	ID     string `json:"id"`
-	URL    string `json:"url"`
-	Verify bool   `json:"verify"`
+	ID  string `json:"id"`
+	URL string `json:"url"`
+	// Verify is a pointer so that "omitted" (nil) can default to TRUE: signature verification must never be
+	// silently disabled by leaving a key out. Use VerifyEnabled().
+	Verify *bool `json:"verify"`
 }
+
+// VerifyEnabled reports whether catalogue signatures must be verified (default true).
+func (c Catalog) VerifyEnabled() bool { return c.Verify == nil || *c.Verify }
 
 type RepoPapers struct {
 	Enabled         bool     `json:"enabled"`
@@ -144,9 +147,7 @@ func Load(path string, environ []string) (Config, error) {
 		if err != nil {
 			return c, fmt.Errorf("read config: %w", err)
 		}
-		dec := json.NewDecoder(bytes.NewReader(data))
-		dec.DisallowUnknownFields()
-		if err := dec.Decode(&c); err != nil {
+		if err := decodeConfig(data, &c); err != nil {
 			return c, fmt.Errorf("parse config %s: %w", path, err)
 		}
 	}
@@ -160,7 +161,7 @@ func Load(path string, environ []string) (Config, error) {
 }
 
 // ApplyEnv overrides fields from YUBEOS_<PATH> variables, where PATH is the json-tag path upper-cased
-// and joined by "_" (e.g. YUBEOS_SERVER_LISTEN, YUBEOS_SERVER_TLS_MODE, YUBEOS_AUTH_REQUIRE2FAFORADMINS).
+// and joined by "_" (e.g. YUBEOS_SERVER_LISTEN, YUBEOS_SERVER_TLS_MODE, YUBEOS_AUTH_REQUIRE2FA).
 // Lists are comma-separated. Only string, bool, int and []string fields are supported.
 func ApplyEnv(c *Config, environ []string) error {
 	env := make(map[string]string, len(environ))
@@ -255,8 +256,16 @@ func (c Config) Validate() error {
 	if c.Server.BehindProxy && len(c.Server.TrustedProxies) == 0 {
 		bad("server.behindProxy=true requires server.trustedProxies (otherwise client IPs cannot be trusted)")
 	}
-	if c.Server.TLS.Mode == "acme" && len(c.Server.TLS.ACMEDomains) == 0 {
-		bad("server.tls.mode=acme requires server.tls.acmeDomains")
+	if c.Server.TLS.Mode == "acme" {
+		bad("server.tls.mode=acme is not implemented yet (planned Phase 1d): use tls.mode=files, or behindProxy=true behind a TLS-terminating proxy/tunnel")
+	}
+	for _, h := range c.Server.AllowedHosts {
+		if !validHostEntry(h) {
+			bad("server.allowedHosts entry %q must be a bare hostname or IP (no port, scheme, path or wildcard)", h)
+		}
+	}
+	if c.Addons.BaseDomain != "" && !validHostEntry(c.Addons.BaseDomain) {
+		bad("addons.baseDomain %q must be a bare hostname", c.Addons.BaseDomain)
 	}
 	if !oneOf(c.Auth.Mode, "native", "pam") {
 		bad("auth.mode must be native|pam, got %q", c.Auth.Mode)
@@ -277,8 +286,8 @@ func (c Config) Validate() error {
 		bad("auth.adminRemoteTrustedDeviceDays must be 0..90")
 	}
 	for _, p := range c.Access.AllowCIDRs {
-		if _, _, err := net.ParseCIDR(p); err != nil {
-			bad("access.allowCidrs entry %q is not a CIDR", p)
+		if !validIPOrCIDR(p) {
+			bad("access.allowCidrs entry %q is not an IP or CIDR", p)
 		}
 	}
 	if c.Auth.LockoutMinutes < 1 || c.Auth.LockoutMinutes > 1440 {
@@ -289,8 +298,8 @@ func (c Config) Validate() error {
 		if len(c.Server.AllowedHosts) == 0 {
 			bad("server.exposure=remote requires server.allowedHosts (your public hostname) to defeat DNS rebinding")
 		}
-		if !c.Server.BehindProxy && c.Server.TLS.Mode == "selfsigned" {
-			bad("server.exposure=remote requires a trusted certificate: tls.mode=files|acme, or behindProxy=true")
+		if !c.Server.BehindProxy && c.Server.TLS.Mode != "files" {
+			bad("server.exposure=remote requires a trusted certificate: tls.mode=files, or behindProxy=true (built-in ACME is planned)")
 		}
 		if c.Auth.Mode != "native" {
 			bad("server.exposure=remote requires auth.mode=native (PAM mode is LAN-only)")
@@ -323,10 +332,20 @@ func (c Config) Validate() error {
 	if len(c.Files.Roots) == 0 {
 		bad("files.roots must contain at least one path")
 	}
+	rootSeen := map[string]bool{}
 	for _, r := range c.Files.Roots {
-		if !filepath.IsAbs(r) {
+		switch {
+		case !filepath.IsAbs(r):
 			bad("files.roots entry %q must be absolute", r)
+		case filepath.Clean(r) == "/":
+			bad("files.roots must not contain \"/\": expose specific directories, not the whole filesystem")
+		case rootSeen[filepath.Clean(r)]:
+			bad("files.roots entry %q is duplicated", r)
 		}
+		rootSeen[filepath.Clean(r)] = true
+	}
+	if c.Terminal.Shell != "" && !filepath.IsAbs(c.Terminal.Shell) {
+		bad("terminal.shell must be an absolute path (or empty for the user's login shell)")
 	}
 	if c.Terminal.MaxSessionsPerUser < 1 || c.Terminal.MaxSessionsPerUser > 50 {
 		bad("terminal.maxSessionsPerUser must be 1..50")
@@ -362,6 +381,30 @@ func (c Config) Validate() error {
 	return nil
 }
 
+// validHostEntry accepts a bare DNS name or IP literal: no port, scheme, path, wildcard or whitespace.
+func validHostEntry(h string) bool {
+	if h == "" || len(h) > 253 {
+		return false
+	}
+	if ip := net.ParseIP(strings.Trim(h, "[]")); ip != nil {
+		return true
+	}
+	if strings.ContainsAny(h, ":/\\@*? \t[]") {
+		return false
+	}
+	for _, label := range strings.Split(h, ".") {
+		if label == "" || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for _, r := range label {
+			if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-') {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func validIPOrCIDR(s string) bool {
 	if _, _, err := net.ParseCIDR(s); err == nil {
 		return true
@@ -378,4 +421,67 @@ func parsePortRange(s string) (lo, hi int, ok bool) {
 	lo, err1 = strconv.Atoi(a)
 	hi, err2 = strconv.Atoi(b)
 	return lo, hi, err1 == nil && err2 == nil
+}
+
+// Warnings lists NON-fatal problems: settings that validate but have no effect in this build, and risky values.
+// The config must never suggest protection that is not actually enforced (docs/ROADMAP.md phases).
+func (c Config) Warnings() []string {
+	d := Default()
+	var w []string
+	notEnforced := func(section string, got, def any, phase string) {
+		if !equalLoose(reflect.ValueOf(got), reflect.ValueOf(def)) {
+			w = append(w, fmt.Sprintf("%s is configured but NOT enforced yet in this build (arrives in %s)", section, phase))
+		}
+	}
+	notEnforced("terminal.*", c.Terminal, d.Terminal, "Phase 3")
+	notEnforced("files.*", c.Files, d.Files, "Phase 4")
+	notEnforced("providers.*", c.Providers, d.Providers, "Phase 2/5")
+	notEnforced("addons.*", c.Addons, d.Addons, "Phase 7")
+	notEnforced("repopapers.*", c.RepoPapers, d.RepoPapers, "Phase 8")
+	if c.Auth.Mode == "pam" {
+		w = append(w, "auth.mode=pam is not implemented: native credentials are always used")
+	}
+	if c.Auth.TrustedDeviceDays != d.Auth.TrustedDeviceDays || c.Auth.AdminRemoteTrustedDeviceDays != d.Auth.AdminRemoteTrustedDeviceDays ||
+		c.Auth.AllowPasskeyAsSoleFactor != d.Auth.AllowPasskeyAsSoleFactor || c.Auth.BreachCheck {
+		w = append(w, "auth.trustedDeviceDays/adminRemoteTrustedDeviceDays/allowPasskeyAsSoleFactor/breachCheck are not used yet (second factors and trusted devices arrive in Phase 1c)")
+	}
+	if c.Auth.Require2FA != "none" || c.Server.Exposure == "remote" {
+		w = append(w, "second-factor verification (TOTP/passkeys) arrives in Phase 1c: until then local users without a second factor get an enrollment-only session, and remote-origin logins are refused")
+	}
+	for _, p := range c.Server.TrustedProxies {
+		if _, n, err := net.ParseCIDR(p); err == nil {
+			if ones, bits := n.Mask.Size(); (bits == 32 && ones < 16) || (bits == 128 && ones < 48) {
+				w = append(w, fmt.Sprintf("server.trustedProxies entry %q is very broad: any host in it can spoof client IPs; list only your proxy's address", p))
+			}
+		}
+	}
+	return w
+}
+
+// equalLoose is reflect.DeepEqual where nil and empty slices are equal.
+func equalLoose(a, b reflect.Value) bool {
+	if a.Kind() != b.Kind() {
+		return false
+	}
+	switch a.Kind() {
+	case reflect.Struct:
+		for i := 0; i < a.NumField(); i++ {
+			if !equalLoose(a.Field(i), b.Field(i)) {
+				return false
+			}
+		}
+		return true
+	case reflect.Slice:
+		if a.Len() != b.Len() {
+			return false
+		}
+		for i := 0; i < a.Len(); i++ {
+			if !equalLoose(a.Index(i), b.Index(i)) {
+				return false
+			}
+		}
+		return true
+	default:
+		return reflect.DeepEqual(a.Interface(), b.Interface())
+	}
 }

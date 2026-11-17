@@ -21,6 +21,7 @@ We record decisions that are expensive to reverse. Status values: **Proposed** (
 | [0015](0015-fsworker.md) | Per-session file workers | **Proposed** (spike S-2) |
 | [0016](0016-native-credentials.md) | Native credentials, passkeys, TOTP, trusted devices | Accepted |
 | [0017](0017-remote-access.md) | Remote access via exposure modes | Accepted |
+| [0018](0018-addon-ui-isolation.md) | Add-on UIs never share Yubeos' origin or hostname | Accepted |
 
 ## Template
 

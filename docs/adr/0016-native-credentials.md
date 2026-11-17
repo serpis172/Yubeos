@@ -22,3 +22,6 @@ The web UI must be reachable from outside the local network with robust authenti
 
 ## Alternatives considered
 PAM only (rejected for remote exposure); external IdP/OIDC (planned post-1.0, would add a dependency on a third service); client TLS certificates (strong but poor UX across devices); email/SMS recovery (larger attack surface — rejected, recovery is by codes or host root).
+
+## Addendum 2026-11-14 (Phase 1a/1b implemented)
+Implemented as designed. Two refinements discovered while building: (1) setup links live in the helper store and may only be created by a **root** peer (`yubeosctl`), so a compromised daemon cannot mint its own way in; (2) the helper keeps a per-user **credential epoch** that the daemon re-checks every 60 s, which is how a reset or password change performed on the host ends live sessions without the CLI touching the daemon database.

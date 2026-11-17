@@ -23,11 +23,13 @@ type Problem struct {
 	Detail   string       `json:"detail,omitempty"`
 	Instance string       `json:"instance,omitempty"`
 	Errors   []FieldError `json:"errors,omitempty"`
+	// RequestID mirrors the X-Request-Id response header so users can quote it when reporting problems.
+	RequestID string `json:"requestId,omitempty"`
 }
 
 // Write sends a problem response. code is the stable machine-readable suffix of Type.
 func Write(w http.ResponseWriter, r *http.Request, status int, code, title, detail string, errs ...FieldError) {
-	p := Problem{Type: TypeBase + code, Title: title, Status: status, Detail: detail, Errors: errs}
+	p := Problem{Type: TypeBase + code, Title: title, Status: status, Detail: detail, Errors: errs, RequestID: w.Header().Get("X-Request-Id")}
 	if r != nil {
 		p.Instance = r.URL.Path
 	}

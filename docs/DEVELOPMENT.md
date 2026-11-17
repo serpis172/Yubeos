@@ -4,7 +4,7 @@
 
 | Tool | Version | Notes |
 |---|---|---|
-| Go | ≥ 1.22 (CI uses 1.24) | `yubeosd` and `yubeos-priv` are pure Go by default; the optional LAN-only PAM mode needs `-tags pam`, cgo and `libpam0g-dev` |
+| Go | ≥ 1.22 minimum language level (CI builds with 1.24; see TD-015) | `yubeosd` and `yubeos-priv` are pure Go by default; the optional LAN-only PAM mode needs `-tags pam`, cgo and `libpam0g-dev` |
 | Node.js | ≥ 22 LTS | + `npm` (lockfile enforced) |
 | make, git | any | |
 | Docker | optional | only to test add-ons for real |
@@ -17,24 +17,31 @@ The whole product runs in **demo mode** with mock hardware — no root, ZFS, GPU
 ```bash
 git clone https://github.com/serpis172/Yubeos && cd Yubeos
 make deps            # go mod download + npm ci
-make demo            # builds the UI, then runs yubeosd --demo on https://localhost:8443 (self-signed cert: accept the warning)
-# UI hot-reload: terminal 1 `go run ./cmd/yubeosd --demo --no-tls`, terminal 2 `make dev-web` → http://localhost:5173
+make demo            # builds the UI, then runs yubeosd --demo on https://127.0.0.1:8443 (loopback only; self-signed cert: accept the warning)
+make dev             # backend (plain HTTP, 127.0.0.1:8443) + Vite HMR on http://localhost:5173
 ```
 
 WSL2 specifics: work inside the Linux filesystem (`~/src`, not `/mnt/c`) for file-watcher speed; WSL2 has no ZFS kernel module and no SMART/GPU passthrough, so storage/GPU/power UIs use mocks there. Real-hardware behaviour is verified in the VM lab (§4) and nightly CI.
+
+### 2.1 First build on a networked machine
+
+The repository intentionally ships `go.mod` without third-party requirements. Run `make deps` once: it executes `go mod tidy`
+(resolving the pure-Go SQLite driver, `golang.org/x/crypto`, `golang.org/x/text`, `gopkg.in/yaml.v3`) and creates `go.sum`.
+Commit both files. After that `make lint test` and `make e2e` are the full local check.
 
 ## 3. Make targets
 
 | Target | Does |
 |---|---|
-| `make dev` | backend with live reload (air-style) + Vite, real providers where available |
+| `make dev` | demo backend (plain HTTP on loopback) + Vite HMR, both stopped with Ctrl-C |
 | `make demo` | everything mocked, deterministic |
 | `make test` | `go test ./... -race` + `vitest` |
 | `make lint` | `golangci-lint`, `go vet`, ESLint, Stylelint (`no-raw-colors`), `tsc --noEmit`, OpenAPI + JSON-Schema lint |
 | `make gen` | regenerate TS client from OpenAPI, Go types from schemas |
 | `make build` | embeds `web/dist` and builds static binaries into `dist/` |
-| `make deb` | builds `.deb` via nfpm |
-| `make vm-test` | provisions the VM lab and runs integration tests |
+| `make deb` | **planned (Phase 9)** — prints a notice and fails for now |
+| `make e2e` | builds the three binaries and runs `test/e2e/auth-smoke.sh` (needs root; creates test users — use the VM lab or a container) |
+| `make vm-test` | **planned** — arrives with the first privileged feature |
 | `make docs` | link-check and render docs |
 
 ## 4. VM lab

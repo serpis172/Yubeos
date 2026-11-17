@@ -1,0 +1,13 @@
+{
+  "apiVersion": "yubeos.dev/v1",
+  "kind": "Addon",
+  "metadata": { "id": "jellyfin", "name": "Jellyfin", "version": "10.10.3", "description": "Media server" },
+  "spec": {
+    "runtime": "compose",
+    "compose": "compose.yaml",
+    "ui": { "service": "jellyfin", "port": 8096, "path": "/", "embed": "link" },
+    "storage": [ { "name": "config", "mount": "/config", "kind": "appdata" } ],
+    "permissions": { "devices": ["/dev/dri/renderD128"] },
+    "healthcheck": { "service": "jellyfin", "path": "/health" }
+  }
+}

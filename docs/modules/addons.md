@@ -28,7 +28,7 @@ metadata:
 spec:
   runtime: compose
   compose: compose.yaml           # relative file in the add-on directory
-  ui: { service: jellyfin, port: 8096, path: "/", embed: iframe, sidebar: true }   # embed: iframe | link | none
+  ui: { service: jellyfin, port: 8096, path: "/", embed: link, sidebar: true }   # embed: iframe (isolated subdomain only) | link | none
   storage:
     - { name: config, mount: /config, kind: appdata, required: true }
     - { name: media,  mount: /media,  kind: dataset, access: ro, required: false }
@@ -64,14 +64,17 @@ All transitions are **jobs**. Compose project name `yubeos-<id>`; all objects la
 - Refresh daily + manual; ETag caching; stored in SQLite `addon_catalog_entries`.
 - First-party manifests **pin images by digest**; community ones are flagged if they use mutable tags.
 
-## 5. UI embedding and reverse proxy
+## 5. UI access and isolation ([ADR-0018](../adr/0018-addon-ui-isolation.md))
 
-`/addons/<id>/…` is reverse-proxied by `yubeosd` to `127.0.0.1:<hostPort>`:
-- requires a valid Yubeos session (so add-on UIs are not exposed unauthenticated by default),
-- Yubeos cookies/headers are **stripped** before forwarding; `X-Forwarded-*` added,
-- WebSocket upgrade supported,
-- response headers: CSP `sandbox allow-scripts allow-forms allow-same-origin allow-popups`, `frame-ancestors 'self'`.
-Apps that cannot work under a sub-path (many cannot) use `embed: link` and open on their own `host:port` (or via a future subdomain proxy, tracked in ROADMAP Phase 7b). The manager shows both URLs.
+Add-on code is untrusted. Its UI is **never served from Yubeos' origin or hostname**:
+
+| Mode | URL | Requirements | Notes |
+|---|---|---|---|
+| **Isolated subdomain** (preferred; required when `exposure: remote`) | `https://<id>.<addons.baseDomain>` | wildcard DNS + wildcard certificate; `addons.baseDomain` set | `yubeosd` proxies to `127.0.0.1:<hostPort>` after a **single-use, 60 s, add-on-scoped ticket** handoff from the Yubeos session; the add-on hostname gets its own cookie; Yubeos' host-only `__Host-` cookie is never sent to it; WebSocket upgrade supported |
+| **Direct link** (LAN fallback) | `http(s)://<other-hostname>:<hostPort>` | the add-on must be reachable under a hostname **different from the one used for Yubeos** (e.g. the server IP) | Cookies are not isolated by port, so Yubeos refuses to build a same-hostname link and shows the alternate address |
+| None | — | — | headless add-ons |
+
+Rules for any proxied response: Yubeos cookies/headers are never forwarded upstream; `X-Forwarded-*` added; CSP for the add-on hostname is its own (`frame-ancestors` only the Yubeos origin when `embed: iframe`); an `iframe` embed uses `sandbox="allow-scripts allow-forms allow-popups"` plus `allow-same-origin` **only** because the content lives on a different origin. A test asserts that nothing under Yubeos' hostname serves add-on-controlled HTML.
 
 ## 6. Security
 

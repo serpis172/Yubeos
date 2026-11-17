@@ -20,6 +20,8 @@ import (
 	"time"
 )
 
+var _, cgnat, _ = net.ParseCIDR("100.64.0.0/10") // Tailscale / carrier-grade NAT range
+
 const (
 	certFile    = "cert.pem"
 	keyFile     = "key.pem"
@@ -95,7 +97,8 @@ func generate(dir string, extraNames []string, now time.Time) error {
 	}
 	if addrs, err := net.InterfaceAddrs(); err == nil {
 		for _, a := range addrs {
-			if ipn, ok := a.(*net.IPNet); ok && !ipn.IP.IsLinkLocalUnicast() && !ipn.IP.IsMulticast() {
+			// Only private/loopback/overlay addresses: never publish a public IP of the host inside the certificate.
+			if ipn, ok := a.(*net.IPNet); ok && (ipn.IP.IsPrivate() || ipn.IP.IsLoopback() || cgnat.Contains(ipn.IP)) {
 				ips = append(ips, ipn.IP)
 			}
 		}

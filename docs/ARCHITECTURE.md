@@ -183,7 +183,7 @@ Storage code addresses devices only via `/dev/disk/by-id/*` (WWN → `nvme-eui` 
 
 ```yaml
 server:     { listen: ":443", httpRedirect: ":80", exposure: lan, allowedHosts: [], behindProxy: false, trustedProxies: [],
-              treatOverlayAsLocal: true, tls: { mode: selfsigned } }      # tls.mode: selfsigned | files | acme (+ acmeDomains, acmeEmail)
+              treatOverlayAsLocal: true, tls: { mode: selfsigned } }      # tls.mode: selfsigned | files   (acme reserved, rejected until Phase 1d)
 access:     { allowCidrs: [] }                                            # optional network allow-list for remote origins
 auth:       { mode: native, adminGroup: yubeos-admin, userGroup: yubeos-user, require2fa: admins, trustedDeviceDays: 30,
               allowPasskeyAsSoleFactor: true, sessionIdleMinutes: 30, remoteIdleMinutes: 15, sessionMaxHours: 12,
@@ -191,7 +191,7 @@ auth:       { mode: native, adminGroup: yubeos-admin, userGroup: yubeos-user, re
 providers:  { storage: auto, gpu: auto, power: auto }
 files:      { roots: ["/mnt"], followSymlinks: false }
 terminal:   { allowUsers: false, requireStepUpWhenRemote: true, maxSessionsPerUser: 5, detachedTtlMinutes: 30 }
-addons:     { enabled: true, catalogs: [ { id: official, url: "https://github.com/serpis172/Yubeos-addons", verify: true } ] }
+addons:     { enabled: true, baseDomain: "", catalogs: [ { id: official, url: "https://github.com/serpis172/Yubeos-addons", verify: true } ] }
 repopapers: { enabled: true, githubTokenFile: "", sources: [github, arxiv, semanticscholar, huggingface] }
 logging:    { level: info, format: json }
 ```

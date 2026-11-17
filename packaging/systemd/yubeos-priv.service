@@ -1,0 +1,47 @@
+[Unit]
+Description=Yubeos privileged helper (credential store and typed root operations)
+Documentation=https://github.com/serpis172/Yubeos/blob/main/docs/SECURITY.md
+After=local-fs.target
+Before=yubeosd.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/libexec/yubeos/yubeos-priv --daemon-user yubeos --socket /run/yubeos/priv.sock --state-dir /var/lib/yubeos-priv
+Restart=on-failure
+RestartSec=2
+
+# Directories: /run/yubeos is traversable so the daemon can reach the socket; the socket itself is 0660 root:yubeos.
+RuntimeDirectory=yubeos
+RuntimeDirectoryMode=0755
+StateDirectory=yubeos-priv
+StateDirectoryMode=0700
+
+# Hardening. Today the helper only needs to chown its socket, so the capability set is minimal.
+# Every new privileged method that needs more (ZFS, mounts, PTYs…) widens this list in the same change.
+# NOTE: NoNewPrivileges must be re-evaluated when terminals arrive (docs/modules/terminal.md §3, ADR-0014).
+CapabilityBoundingSet=CAP_CHOWN
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+UMask=0077
+# SystemCallFilter is intentionally not set yet (TD-014).
+
+[Install]
+WantedBy=multi-user.target

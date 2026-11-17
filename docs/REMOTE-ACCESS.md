@@ -19,15 +19,15 @@ In all cases Yubeos' own login protections apply; options A/B/C only change who 
 | Mode | Meaning | Rules |
 |---|---|---|
 | `lan` (default) | Intended for LAN/VPN. Remote-origin logins are still treated more strictly (§4). | Self-signed TLS allowed; PAM mode allowed; `require2fa` may be `admins` |
-| `remote` | Reachable from the internet (options B or C). | **Enforced at startup — yubeosd refuses to start otherwise:** `allowedHosts` set (your public hostname) · trusted certificate (`tls.mode: files|acme`) **or** `behindProxy: true` with `trustedProxies` · `auth.mode: native` · `auth.require2fa: all` · `allowRoot: false` |
+| `remote` | Reachable from the internet (options B or C). | **Enforced at startup — yubeosd refuses to start otherwise:** `allowedHosts` set (your public hostname) · trusted certificate (`tls.mode: files`; `acme` once implemented) **or** `behindProxy: true` with `trustedProxies` · `auth.mode: native` · `auth.require2fa: all` · `allowRoot: false` |
 
-Example (direct, option C):
+Example (direct, option C) — **until built-in ACME ships (Phase 1d) obtain the certificate with certbot/Caddy/`tailscale cert` and point Yubeos at the files** (reloaded every 6 h and on `SIGHUP`):
 
 ```json
 {
   "server": { "exposure": "remote", "listen": ":443", "httpRedirect": ":80",
               "allowedHosts": ["nas.example.org"],
-              "tls": { "mode": "acme", "acmeDomains": ["nas.example.org"], "acmeEmail": "me@example.org" } },
+              "tls": { "mode": "files", "certFile": "/etc/yubeos/tls/fullchain.pem", "keyFile": "/etc/yubeos/tls/privkey.pem" } },
   "auth":   { "mode": "native", "require2fa": "all", "trustedDeviceDays": 30 }
 }
 ```
@@ -58,10 +58,10 @@ Every request is classified by its **client address**:
 
 | Class | Addresses |
 |---|---|
-| **local** | loopback, RFC 1918 (10/8, 172.16/12, 192.168/16), IPv6 ULA `fc00::/7`, link-local, **and (default) the Tailscale/CGNAT range `100.64.0.0/10`** (overlay members are authenticated by the VPN) |
+| **local** | loopback, RFC 1918 (10/8, 172.16/12, 192.168/16), IPv6 ULA `fc00::/7`, link-local, **and, only while a Tailscale interface (`tailscale0`) exists on the host, the overlay range `100.64.0.0/10`** (overlay members are authenticated by the VPN; this range is also used by ISP CGNAT, so it is never trusted blindly) |
 | **remote** | everything else |
 
-The client address is the TCP peer, **unless** the peer is in `trustedProxies` — only then are `X-Forwarded-For` / `Forwarded` (rightmost untrusted hop) and `CF-Connecting-IP` honoured. A header from an untrusted peer is ignored (tested). Overlay-as-local can be disabled with `server.treatOverlayAsLocal: false`.
+The client address is the TCP peer, **unless** the peer is in `trustedProxies` — only then are `X-Forwarded-For` / `Forwarded` (rightmost untrusted hop) and `CF-Connecting-IP` honoured. A header from an untrusted peer is ignored (tested). Overlay-as-local can be disabled with `server.treatOverlayAsLocal: false`. `trustedProxies` must list your proxy's exact address (e.g. `127.0.0.1`), never a broad range: any host inside it could spoof client IPs; the daemon warns about prefixes shorter than /16.
 
 | Policy | local origin | remote origin |
 |---|---|---|
@@ -86,7 +86,7 @@ The client address is the TCP peer, **unless** the peer is in `trustedProxies` �
 
 | Mode | Notes |
 |---|---|
-| `acme` | Built-in ACME client (`golang.org/x/crypto/acme/autocert`): HTTP-01 (needs :80) or TLS-ALPN-01 (needs :443 reachable by the CA). Renewal automatic, certificates cached in `/var/lib/yubeos/acme` (`0700`). DNS-01 providers (Cloudflare, etc.) are a v1.1 add-on for NAS behind CGNAT. |
+| `acme` | **Not implemented yet — rejected by config validation (TD-013).** Planned built-in ACME client (`golang.org/x/crypto/acme/autocert`): HTTP-01 (needs :80) or TLS-ALPN-01 (needs :443 reachable by the CA). Renewal automatic, certificates cached in `/var/lib/yubeos/acme` (`0700`). DNS-01 providers (Cloudflare, etc.) are a v1.1 add-on for NAS behind CGNAT. |
 | `files` | Bring your own certificate (e.g. from `certbot`, Caddy, Tailscale `cert`); reloaded on `SIGHUP`/file change. |
 | `selfsigned` | LAN only; certificate fingerprint printed at first start; refused in remote mode. |
 | `behindProxy` | TLS ends at the proxy/tunnel; Yubeos listens on loopback or a private interface and trusts only `trustedProxies`. |

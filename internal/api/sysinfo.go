@@ -40,19 +40,20 @@ var capabilityBinaries = map[string]string{
 	"systemdRun": "systemd-run",
 }
 
-func collectSystemInfo(demo bool, now, start time.Time) SystemInfo {
+// hostFacts are the slow-changing parts of SystemInfo.
+type hostFacts struct {
+	Hostname     string
+	OS           OSInfo
+	Capabilities map[string]bool
+}
+
+func readHostFacts(demo bool) hostFacts {
 	if demo {
 		caps := make(map[string]bool, len(capabilityBinaries))
 		for k := range capabilityBinaries {
 			caps[k] = true // every provider has a mock
 		}
-		return SystemInfo{
-			Hostname: "yubeos-demo", Version: version.Version, DemoMode: true,
-			UptimeSeconds: int64(now.Sub(start).Seconds()) + 86400*3,
-			OS:            OSInfo{Name: "Ubuntu", Version: "24.04 LTS (demo)", Kernel: "6.8.0-demo"},
-			Versions:      map[string]string{},
-			Capabilities:  caps,
-		}
+		return hostFacts{Hostname: "yubeos-demo", OS: OSInfo{Name: "Ubuntu", Version: "24.04 LTS (demo)", Kernel: "6.8.0-demo"}, Capabilities: caps}
 	}
 	host, _ := os.Hostname()
 	rel := parseOSRelease("/etc/os-release")
@@ -62,12 +63,17 @@ func collectSystemInfo(demo bool, now, start time.Time) SystemInfo {
 		_, err := exec.LookPath(bin)
 		caps[k] = err == nil
 	}
+	return hostFacts{Hostname: host, OS: OSInfo{Name: rel["NAME"], Version: rel["VERSION"], Kernel: strings.TrimSpace(string(kernel))}, Capabilities: caps}
+}
+
+func buildSystemInfo(demo bool, f hostFacts, now, start time.Time) SystemInfo {
+	up := hostUptime()
+	if demo {
+		up = int64(now.Sub(start).Seconds()) + 86400*3
+	}
 	return SystemInfo{
-		Hostname: host, Version: version.Version, DemoMode: false,
-		UptimeSeconds: hostUptime(),
-		OS:            OSInfo{Name: rel["NAME"], Version: rel["VERSION"], Kernel: strings.TrimSpace(string(kernel))},
-		Versions:      map[string]string{},
-		Capabilities:  caps,
+		Hostname: f.Hostname, Version: version.Version, DemoMode: demo, UptimeSeconds: up,
+		OS: f.OS, Versions: map[string]string{}, Capabilities: f.Capabilities,
 	}
 }
 

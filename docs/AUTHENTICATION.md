@@ -4,6 +4,22 @@ Status: **Accepted (v0.2 spec)** · Supersedes the auth parts of [ADR-0010](adr/
 
 Goal: a login system that is safe to expose to the internet, usable daily (passkeys, "remember this device"), and recoverable without email or third parties.
 
+## 0. Implementation status
+
+| Capability | State |
+|---|---|
+| Argon2id verifiers + pepper in the helper, calibration, rehash on parameter change, password policy | ✅ implemented, tested |
+| Setup links (`yubeosctl user add/reset`), single use, expiry, global throttling | ✅ |
+| Login, sessions (hashed IDs, rotation with grace, idle/absolute lifetimes), CSRF + Origin, logout, session list/revoke | ✅ |
+| Lockout per account, IP bans (remote), uniform failures, fail2ban log line, audit hash chain | ✅ |
+| Origin classification, trusted proxies, `access.allowCidrs`, enrollment-only sessions | ✅ |
+| Credential epoch (reset/password change ends sessions within 60 s), role re-validation | ✅ |
+| TOTP, recovery codes, WebAuthn passkeys, trusted devices, step-up tickets, API tokens | ⏳ Phase 1c |
+| Global login cool-down, built-in ACME, `lockdown`, `doctor --remote` | ⏳ Phase 1d |
+| Enrollment wizard, trusted-device UI, i18n, theme editor | ⏳ Phase 1e (a minimal login and setup page exist) |
+
+Password change currently requires the **current password** as proof; the second-factor step-up replaces it in Phase 1c (TD-019).
+
 ## 1. Concepts
 
 | Term | Meaning |
@@ -61,7 +77,7 @@ Browser ── username+password ─▶ [lockout / rate-limit checks] ─▶ pas
 
 1. **Passkey as sole factor** (`auth.allowPasskeyAsSoleFactor: true`, default): a passkey assertion with user verification (PIN/biometric) satisfies both factors. It is the **recommended** way to sign in: phishing-resistant, no password typed, works from phone/laptop/security key.
 2. **Password + second factor**: the password is verified first; the second factor is a passkey (as 2FA), a TOTP code, or a recovery code.
-3. **Challenge** (`challengeId`) is single-use, bound to the client IP prefix and user agent family, expires after 5 minutes, and allows 5 attempts.
+3. **Challenge** (`challengeId`) is single-use, bound to the user-agent family, expires after 5 minutes and allows 5 attempts. The client IP prefix is recorded and mismatches are logged and raise the risk score, but are **not** enforced (mobile networks legitimately change IP mid-login).
 4. **2FA policy** (`auth.require2fa`): `none` (not recommended), `admins` (default), `all`. In addition **always**, regardless of this setting:
    - any login from a **non-local origin** requires a second factor ([REMOTE-ACCESS §4](REMOTE-ACCESS.md#4-origin-classification-and-policy));
    - when `server.exposure: remote`, `auth.require2fa` must be `all` (config validation).
@@ -87,7 +103,7 @@ After a successful second factor the user may tick **"Trust this device"**.
 | Token | 256-bit random, cookie `__Host-yubeos_device` (`Secure; HttpOnly; SameSite=Strict; Path=/`, `Max-Age = trustedDeviceDays`). Server stores only `SHA-256(token)`. |
 | Lifetime | `auth.trustedDeviceDays` (default **30**, max 90, `0` disables the feature) measured from the **last full second-factor verification** — a trusted device never renews itself: after N days the second factor is asked again. |
 | What it skips | **Only the TOTP prompt** of a normal login, and **only after the password (or passkey) succeeded**. It never replaces the password, never satisfies step-up, never applies to first logins from a new account, never applies to recovery/credential changes. |
-| Rotation | The token is **rotated on every use**. Presenting an already-rotated (old) token signals theft or cloning: that device record and all sessions from it are revoked, the user is notified at next login, an audit alert is written, and a full 2FA is demanded. |
+| Rotation | The token is **rotated on every use**. The previous token hash is kept **until the next rotation plus 24 h** (not a short window), so reuse is detected even after hours. Presenting an already-rotated (old) token signals theft or cloning: that device record and all sessions from it are revoked, the user is notified at next login, an audit alert is written, and a full 2FA is demanded. |
 | Binding | Record keeps user-agent family + major version and OS; a big change (browser family/OS) invalidates trust. Not bound to IP (mobile networks change IPs) but IP/time of every use are recorded. |
 | Management | `Settings → Security → Devices`: label (editable), created, last used, last IP, browser/OS, expiry; **revoke one**, **revoke all / sign out everywhere**. Admins can revoke another user's devices. |
 | Notifications | New-device sign-in raises an in-app notice at next login and an audit event (`auth.device.new`); webhook notification (ntfy/Gotify/generic) in v1.1. |
