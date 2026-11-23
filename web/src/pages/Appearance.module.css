@@ -1,0 +1,7 @@
+.colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.color { display: grid; grid-template-columns: 36px 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; padding: 8px; background: var(--y-surface-2); border: 1px solid var(--y-border); border-radius: var(--y-radius); cursor: pointer; font-size: 13px; }
+.color input { grid-row: span 2; width: 36px; height: 36px; padding: 0; border: 1px solid var(--y-border); border-radius: 6px; background: none; cursor: pointer; }
+.color code { color: var(--y-text-muted); font-family: var(--y-font-mono); font-size: 12px; }
+.preview { background: var(--y-bg); color: var(--y-text); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 16px; font-family: var(--y-font-ui); font-size: var(--y-font-size); line-height: var(--y-line-height); display: grid; gap: 8px; justify-items: start; }
+.preview p { margin: 0; color: var(--y-text-muted); }
+.previewButton { background: var(--y-accent); color: var(--y-accent-contrast); border: 0; border-radius: var(--y-radius); padding: 8px 14px; font: inherit; font-weight: 700; }

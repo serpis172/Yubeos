@@ -1,0 +1,14 @@
+.overlay { position: fixed; inset: 0; background: var(--y-overlay); display: grid; place-items: center; padding: 20px; z-index: 50; }
+.dialog { width: min(420px, 100%); background: var(--y-surface-1); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 24px; display: grid; gap: 12px; }
+.dialog h2 { margin: 0; font-family: var(--y-font-display); font-size: 18px; }
+.hint { margin: 0; color: var(--y-text-muted); }
+.field { display: grid; gap: 6px; }
+.field label { font-weight: 600; font-size: 13px; }
+.field input { background: var(--y-surface-2); color: var(--y-text); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 10px 12px; font: inherit; }
+.field input:focus-visible { outline: 2px solid var(--y-accent); outline-offset: 1px; }
+.error { background: var(--y-surface-2); border: 1px solid var(--y-danger); border-radius: var(--y-radius); padding: 10px 12px; margin: 0; }
+.row { display: flex; gap: 10px; justify-content: flex-end; }
+.primary { background: var(--y-accent); color: var(--y-accent-contrast); border: 0; border-radius: var(--y-radius); padding: 9px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+.primary:disabled { opacity: 0.6; }
+.secondary { background: var(--y-surface-2); color: var(--y-text); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+.textButton { background: none; border: 0; padding: 0; color: var(--y-accent); font: inherit; cursor: pointer; text-decoration: underline; justify-self: start; }

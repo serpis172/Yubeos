@@ -276,7 +276,11 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["WebAuthnLoginBegin"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -284,7 +288,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["WebAuthnOptions"];
+                        "application/json": components["schemas"]["WebAuthnChallenge"];
                     };
                 };
                 401: components["responses"]["Problem"];
@@ -318,7 +322,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["WebAuthnAssertion"];
+                    "application/json": components["schemas"]["WebAuthnLoginFinish"];
                 };
             };
             responses: {
@@ -368,7 +372,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["WebAuthnOptions"];
+                        "application/json": components["schemas"]["WebAuthnChallenge"];
                     };
                 };
                 401: components["responses"]["Problem"];
@@ -402,7 +406,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["WebAuthnAssertion"];
+                    "application/json": components["schemas"]["WebAuthnRegisterFinish"];
                 };
             };
             responses: {
@@ -411,7 +415,9 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Passkey"];
+                    };
                 };
                 401: components["responses"]["Problem"];
                 403: components["responses"]["Forbidden"];
@@ -532,8 +538,8 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description OK */
-                200: {
+                /** @description Step-up window opened */
+                204: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1193,6 +1199,261 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/stepup/begin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start a step-up: lists the usable methods and, for passkeys, the assertion options */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WebAuthnChallenge"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/factors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Second-factor overview of the current user */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Factors"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Interface preferences of the current user (defaults when never saved) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Preferences"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        /** Replace the preferences (validated; at most 128 KiB) */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Preferences"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Preferences"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metrics/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Series, devices and provider health */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MetricCatalog"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metrics/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest value of every series */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MetricSnapshot"];
+                    };
+                };
+                401: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metrics/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History of series (ring buffer up to 1 h, minute rollups beyond) */
+        get: {
+            parameters: {
+                query: {
+                    /** @description Comma separated keys or prefix.* patterns, at most 64 */
+                    series: string;
+                    range: "5m" | "1h" | "24h" | "7d" | "30d";
+                    /** @description Bucket size in seconds (default depends on the range) */
+                    step?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MetricHistory"];
+                    };
+                };
+                400: components["responses"]["Problem"];
+                401: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1223,7 +1484,7 @@ export interface components {
             role: "admin" | "user";
             csrf: string;
             totpEnabled?: boolean;
-            factors?: ("password" | "passkey" | "totp")[];
+            factors?: ("password" | "passkey" | "totp" | "recovery" | "device")[];
             trustedDevice?: boolean;
             /** @description Session originates from a non-local address */
             remoteSession?: boolean;
@@ -1271,11 +1532,17 @@ export interface components {
         SecondFactorRequest: {
             challengeId?: string;
             /** @enum {string} */
-            method: "totp" | "recovery" | "webauthn";
+            method: "totp" | "recovery" | "webauthn" | "password";
             code?: string;
             /** @description Remember this device (skips TOTP prompt for auth.trustedDeviceDays) */
             trustDevice?: boolean;
             deviceLabel?: string;
+            /** @description Step-up only, and only for accounts with no second factor enrolled */
+            password?: string;
+            /** @description Browser PublicKeyCredential JSON (method webauthn) */
+            credential?: {
+                [key: string]: unknown;
+            };
         };
         TotpConfirmRequest: {
             code: string;
@@ -1375,6 +1642,118 @@ export interface components {
         /** @description Browser PublicKeyCredential JSON (attestation or assertion) */
         WebAuthnAssertion: {
             [key: string]: unknown;
+        };
+        WebAuthnChallenge: {
+            /** @description Opaque, single-use, expires in 5 minutes */
+            challengeId: string;
+            methods?: string[];
+            webauthn: components["schemas"]["WebAuthnOptions"];
+            /** Format: date-time */
+            expiresAt?: string;
+        };
+        Passkey: {
+            id: string;
+            label: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastUsedAt?: string;
+            /** @description Signature-counter regression seen: this passkey is refused until removed */
+            flagged: boolean;
+        };
+        Factors: {
+            totp: boolean;
+            passkeys: components["schemas"]["Passkey"][];
+            recoveryCodesLeft: number;
+            /** @description Policy demands a second factor for this user and origin */
+            required: boolean;
+        };
+        WebAuthnLoginBegin: {
+            /** @description From the 202 login response: ask for options bound to that user. Omit for a usernameless passkey login. */
+            challengeId?: string;
+        };
+        WebAuthnLoginFinish: {
+            challengeId: string;
+            trustDevice?: boolean;
+            credential: components["schemas"]["WebAuthnAssertion"];
+        };
+        WebAuthnRegisterFinish: {
+            challengeId: string;
+            label?: string;
+            credential: components["schemas"]["WebAuthnAssertion"];
+        };
+        Preferences: {
+            /** @description system | preset id | custom:<id> */
+            theme: string;
+            /** @enum {string} */
+            language: "en" | "it";
+            /**
+             * @description Network rates in bytes/s or bits/s
+             * @enum {string}
+             */
+            units: "bytes" | "bits";
+            /** @enum {string} */
+            temperature: "c" | "f";
+            customThemes: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Format: int64
+             * @description Unix ms of the last save; 0 = nothing saved yet
+             */
+            updatedAt: number;
+        };
+        MetricSeries: {
+            /** @example cpu.0.util */
+            key: string;
+            label: string;
+            /** @enum {string} */
+            unit: "percent" | "celsius" | "bytes" | "bytes/s" | "bit/s" | "watt" | "hertz" | "count" | "count/s" | "load" | "seconds";
+            /** @enum {string} */
+            group: "cpu" | "mem" | "net" | "gpu" | "disk" | "sys";
+            device: string;
+            /** @description No value for more than 5 seconds */
+            stale: boolean;
+        };
+        MetricDevice: {
+            /** @enum {string} */
+            kind: "cpu" | "net" | "gpu" | "disk";
+            id: string;
+            label: string;
+            /** @description Virtual interface etc.: collected but not shown by default */
+            hidden?: boolean;
+            props?: {
+                [key: string]: unknown;
+            };
+        };
+        MetricProvider: {
+            name: string;
+            ok: boolean;
+            reason?: string;
+        };
+        MetricCatalog: {
+            series: components["schemas"]["MetricSeries"][];
+            devices: components["schemas"]["MetricDevice"][];
+            providers: components["schemas"]["MetricProvider"][];
+        };
+        MetricSnapshot: {
+            /** Format: int64 */
+            t: number;
+            values: {
+                [key: string]: number;
+            };
+            stale: string[];
+        };
+        MetricHistory: {
+            /** @enum {string} */
+            range: "5m" | "1h" | "24h" | "7d" | "30d";
+            stepSeconds: number;
+            series: {
+                [key: string]: {
+                    t: number[];
+                    v: number[];
+                };
+            };
         };
     };
     responses: {

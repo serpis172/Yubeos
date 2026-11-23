@@ -14,7 +14,7 @@ export default defineConfig({
       "/healthz": { target: backend },
     },
   },
-  build: { outDir: "dist", emptyOutDir: true, sourcemap: false, target: "es2022" },
+  build: { outDir: "dist", emptyOutDir: true, sourcemap: false, target: "es2022", assetsInlineLimit: 0 }, // 0: never inline fonts as data: URIs (CSP font-src 'self')
   test: {
     environment: "jsdom",
     globals: true,

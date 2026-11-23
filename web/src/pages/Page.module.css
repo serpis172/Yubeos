@@ -1,0 +1,26 @@
+.page { display: grid; gap: 20px; max-width: 880px; }
+.page h1 { margin: 0; font-family: var(--y-font-display); font-size: 24px; }
+.card { background: var(--y-surface-1); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 20px; display: grid; gap: 14px; }
+.card h2 { margin: 0; font-size: 16px; font-family: var(--y-font-display); }
+.card h3 { margin: 0; font-size: 14px; }
+.hint { margin: 0; color: var(--y-text-muted); }
+.muted { color: var(--y-text-muted); font-size: 13px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--y-surface-2); border: 1px solid var(--y-border); border-radius: var(--y-radius); flex-wrap: wrap; }
+.item > .grow { flex: 1; min-width: 160px; display: grid; gap: 2px; }
+.pill { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 700; border: 1px solid var(--y-border); color: var(--y-text-muted); }
+.ok { border-color: var(--y-success); color: var(--y-success); }
+.warn { border-color: var(--y-warning); color: var(--y-warning); }
+.fail { border-color: var(--y-danger); color: var(--y-danger); }
+.button { background: var(--y-accent); color: var(--y-accent-contrast); border: 0; border-radius: var(--y-radius); padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+.button:disabled { opacity: 0.6; cursor: progress; }
+.secondary { background: var(--y-surface-2); color: var(--y-text); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+.danger { background: transparent; color: var(--y-danger); border: 1px solid var(--y-danger); border-radius: var(--y-radius); padding: 6px 12px; font: inherit; font-weight: 600; cursor: pointer; }
+.error { background: var(--y-surface-2); border: 1px solid var(--y-danger); border-radius: var(--y-radius); padding: 10px 12px; margin: 0; }
+.success { background: var(--y-surface-2); border: 1px solid var(--y-success); border-radius: var(--y-radius); padding: 10px 12px; margin: 0; }
+.field { display: grid; gap: 6px; max-width: 420px; }
+.field label { font-weight: 600; font-size: 13px; }
+.field input, .field select, .field textarea { background: var(--y-surface-2); color: var(--y-text); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 9px 12px; font: inherit; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--y-accent); outline-offset: 1px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.panel { border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 16px; display: grid; gap: 12px; background: var(--y-surface-2); }

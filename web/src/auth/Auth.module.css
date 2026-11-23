@@ -14,3 +14,25 @@
 .ok { border-color: var(--y-success); }
 .link { color: var(--y-accent); }
 .footnote { margin: 16px 0 0; font-size: 12px; color: var(--y-text-muted); }
+.divider { display: flex; align-items: center; gap: 10px; color: var(--y-text-muted); font-size: 12px; margin: 16px 0; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--y-border); }
+.check { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; font-size: 13px; cursor: pointer; }
+.check input { margin-top: 3px; accent-color: var(--y-accent); }
+.check small { display: block; color: var(--y-text-muted); font-size: 12px; margin-top: 2px; }
+.secondary { width: 100%; margin-top: 10px; background: var(--y-surface-2); color: var(--y-text); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 10px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+.secondary:disabled { opacity: 0.6; cursor: progress; }
+.links { display: flex; justify-content: space-between; gap: 12px; margin: 16px 0 0; flex-wrap: wrap; }
+.textButton { background: none; border: 0; padding: 0; color: var(--y-accent); font: inherit; cursor: pointer; text-decoration: underline; }
+.wide { width: min(560px, 100%); }
+.choices { display: grid; gap: 12px; margin: 16px 0; }
+.choice { text-align: left; background: var(--y-surface-2); color: var(--y-text); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 14px; font: inherit; cursor: pointer; display: grid; gap: 4px; }
+.choice:hover:not(:disabled), .choice:focus-visible { border-color: var(--y-accent); outline: none; }
+.choice b { font-size: 15px; }
+.choice span { color: var(--y-text-muted); font-size: 13px; }
+.badge { display: inline-block; background: var(--y-accent); color: var(--y-accent-contrast); border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 700; margin-left: 8px; vertical-align: middle; }
+.qr { display: block; margin: 12px auto; border-radius: var(--y-radius); width: 200px; height: 200px; }
+.secret { font-family: var(--y-font-mono); word-break: break-all; background: var(--y-surface-2); border: 1px solid var(--y-border); border-radius: var(--y-radius); padding: 8px 10px; font-size: 13px; user-select: all; }
+.codes { list-style: none; margin: 12px 0; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 16px; background: var(--y-surface-2); border: 1px solid var(--y-border); border-radius: var(--y-radius); font-family: var(--y-font-mono); font-size: 14px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.row > * { flex: 1; }
+.progress { color: var(--y-text-muted); font-size: 13px; margin: 0 0 8px; }
