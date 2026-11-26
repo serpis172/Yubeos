@@ -22,6 +22,8 @@ We record decisions that are expensive to reverse. Status values: **Proposed** (
 | [0016](0016-native-credentials.md) | Native credentials, passkeys, TOTP, trusted devices | Accepted |
 | [0017](0017-remote-access.md) | Remote access via exposure modes | Accepted |
 | [0018](0018-addon-ui-isolation.md) | Add-on UIs never share Yubeos' origin or hostname | Accepted |
+| [0019](0019-websocket-library.md) | WebSocket library: `coder/websocket` | Accepted |
+| [0020](0020-user-preferences.md) | Interface preferences are stored per user on the server | Accepted |
 
 ## Template
 

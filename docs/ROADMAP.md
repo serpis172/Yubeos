@@ -10,7 +10,8 @@ The project is built in **phases**. A phase is *done* only when its Definition o
 4. **Vertical slice per PR** — migration → repo layer → API → UI → tests → docs.
 5. **Risky spikes are time-boxed** and recorded as ADRs (S-1 … S-4).
 6. **No phase starts until the previous DoD is met**, except documented parallel tracks (UI components ‖ backend).
-7. Every phase ends with a tagged pre-release (`v0.N.0`) installable in the VM test lab.
+7. Every phase updates the [tutorial](tutorial/README.md): status badges, command reference and screenshots.
+8. Every phase ends with a tagged pre-release (`v0.N.0`) installable in the VM test lab.
 
 ## Dependency graph
 
@@ -49,7 +50,7 @@ P2..P8 ─▶ P9 Hardening & Release 1.0
 | SQLite open + migration runner + `0001_init.sql` | ⏳ deferred → TD-010 |
 | YAML config decoding | ⏳ deferred → TD-009 |
 
-### P1 — Core spine, authentication and remote access · `v0.1.0` — **status: 1a ✅ 1b ✅ (1c–1e pending)**
+### P1 — Core spine, authentication and remote access · `v0.1.0` — **status: 1a ✅ 1b ✅ 1c ✅ 1d ✅ 1e ✅ P2 ✅ (2a–2c; 2d open) — 1c–1e implemented and tested in a sandbox; confirm on Go 1.26 after `go mod tidy` (TD-024), remaining acceptance tests TD-025**
 The largest security-critical phase; sub-phases are **sequential** (each builds on the previous), UI work (1e) can start in parallel after 1b's contract is merged.
 - **1a Privilege spine:** `yubeos-priv` + RPC framing + method registry + audit + SQLite layer in `yubeosd` (clears TD-010) + YAML config (clears TD-009); in-process fake helper for demo; hostile-input tests.
 - **1b Credentials & sessions:** credential store in the helper (Argon2id, calibration), `auth.password.*`, `setup` links + `yubeosctl user add/reset`, login/logout/me, sessions (hashed IDs, rotation, idle/absolute, origin class), CSRF + Origin checks, RBAC middleware (default-deny, already scaffolded), API tokens, audit hash chain, lockout + dummy hashing.
@@ -71,6 +72,7 @@ The largest security-critical phase; sub-phases are **sequential** (each builds 
 
 ### P2 — Dashboard · `v0.2.0`
 2a collectors + ring buffers + `/metrics/*` + `/ws/metrics` (CPU, RAM+ARC, net) · 2b GPU (NVIDIA) + RAPL via helper + disk IO · 2c UI widgets per sketch, heat grid, responsive · 2d (optional) draggable layout.
+**Status:** 2a–2c implemented (see [dashboard §7](modules/dashboard.md#7-as-built-notes)); 2d not delivered (TD-032); real-hardware validation and soak test open (TD-031).
 **DoD:** acceptance in [dashboard §6](modules/dashboard.md#6-acceptance-criteria-phase-2); soak test passes.
 
 ### P3 — Terminal · `v0.3.0`

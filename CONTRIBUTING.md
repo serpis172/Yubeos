@@ -17,6 +17,7 @@ Thanks for helping. The project is contract-first and phase-driven; read [ARCHIT
 - No new privileged RPC method without: schema, allow-list entry, audit event, unit test with a hostile input case.
 - No new dependency without an entry in [ADR-0013 dependency policy](docs/adr/0013-dependency-policy.md) criteria (stdlib first).
 - Every provider has a mock; every feature works in `--demo` mode.
+- User-visible changes update the [tutorial](docs/tutorial/README.md) (status badges, commands, screenshots) in the same PR.
 - Debt is allowed only if registered in [TECH-DEBT](docs/engineering/TECH-DEBT.md).
 
 ## Sign-off

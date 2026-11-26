@@ -7,33 +7,41 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/serpis172/Yubeos/internal/addons"
 	"github.com/serpis172/Yubeos/internal/auth"
 	"github.com/serpis172/Yubeos/internal/clock"
 	"github.com/serpis172/Yubeos/internal/config"
+	"github.com/serpis172/Yubeos/internal/metrics"
 	"github.com/serpis172/Yubeos/internal/netx"
 	"github.com/serpis172/Yubeos/internal/problem"
 )
 
 // Options are the dependencies of the API server.
 type Options struct {
-	Config config.Config
-	Log    *slog.Logger
-	Clock  clock.Clock
-	Demo   bool
-	UI     fs.FS            // embedded web build; may be empty
-	Auth   *auth.Service    // nil: every authenticated route answers 401 (no login configured)
-	Net    *netx.Classifier // client IP / origin classification (default: no trusted proxies)
+	Config  config.Config
+	Log     *slog.Logger
+	Clock   clock.Clock
+	Demo    bool
+	UI      fs.FS            // embedded web build; may be empty
+	Auth    *auth.Service    // nil: every authenticated route answers 401 (no login configured)
+	Net     *netx.Classifier // client IP / origin classification (default: no trusted proxies)
+	Metrics *metrics.Hub     // nil: /metrics/* answer 503
+	Prefs   PrefsStore       // nil: in-memory (lost on restart)
+	Addons  addons.Service   // nil: the add-ons list is empty
 	// HostFacts overrides host probing (tests). Default: real probing, cached for factsTTL.
 	HostFacts func() hostFacts
 }
 
 // Server holds shared state for handlers.
 type Server struct {
-	opts  Options
-	start time.Time
-	cls   *netx.Classifier
+	opts   Options
+	start  time.Time
+	cls    *netx.Classifier
+	prefs  PrefsStore
+	wsOpen atomic.Int32 // live WebSocket connections (capped)
 
 	factsMu  sync.Mutex
 	facts    hostFacts
@@ -55,12 +63,17 @@ func New(o Options) http.Handler {
 	if o.Net == nil {
 		o.Net = &netx.Classifier{}
 	}
-	s := &Server{opts: o, start: o.Clock.Now(), cls: o.Net}
+	if o.Prefs == nil {
+		o.Prefs = &MemPrefs{}
+	}
+	s := &Server{opts: o, start: o.Clock.Now(), cls: o.Net, prefs: o.Prefs}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.healthz)
 	mux.Handle("GET /api/v1/system/info", s.require(RoleUser, s.systemInfo))
 	s.registerAuthRoutes(mux)
+	s.registerPhase2Routes(mux)
+	mux.Handle("GET /api/v1/addons", s.require(RoleUser, s.addonsList))
 	// Anything else under /api/ or /ws/ is a JSON 404, never the SPA shell.
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { problem.NotFound(w, r) })
 	mux.HandleFunc("/ws/", func(w http.ResponseWriter, r *http.Request) { problem.NotFound(w, r) })

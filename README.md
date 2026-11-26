@@ -59,7 +59,7 @@ curl -fsSL https://github.com/serpis172/Yubeos/releases/latest/download/install.
 sudo yubeosctl user add <linux-user> --admin    # prints a one-time setup link: choose a password, enrol a passkey/TOTP
 ```
 
-## Try it now (Phase 0 — demo mode)
+## Try it now (demo mode)
 
 ```bash
 git clone https://github.com/serpis172/Yubeos && cd Yubeos
@@ -68,7 +68,7 @@ make dev                   # hot reload: backend (plain HTTP) + Vite on http://l
 make test lint             # Go (race) + web tests, vet, tsc, eslint, schema checks
 ```
 
-Needs Go ≥ 1.22 and Node ≥ 22. `--demo` refuses non-loopback addresses unless you pass `--allow-demo-public` (it has no login). Only the shell, `/healthz` and `/api/v1/system/info` exist so far; each section shows the roadmap phase that delivers it. See [Development](docs/DEVELOPMENT.md).
+Needs Go ≥ 1.26 and Node ≥ 22. `--demo` refuses non-loopback addresses unless you pass `--allow-demo-public` (it has no login). Available so far: the shell, login/password/sessions, the dashboard (live host metrics), appearance preferences, the Add-ons list (open an installed add-on in a new tab) and the security page. Two-factor sign-in with an authenticator app (TOTP), recovery codes and step-up work; passkeys, trusted devices and lockdown answer `501 Not Implemented` until the rest of Phase 1c; the other sections show the roadmap phase that delivers them. See [Development](docs/DEVELOPMENT.md).
 
 ## License
 

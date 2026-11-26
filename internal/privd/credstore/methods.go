@@ -96,4 +96,6 @@ func Register(srv *privd.Server, st *Store) {
 			Username string `json:"username"`
 		}{u}, nil
 	}})
+
+	registerSecondFactors(srv, st)
 }

@@ -26,6 +26,9 @@ tags:
 - name: jobs
 - name: security
 - name: audit
+- name: me
+- name: metrics
+- name: addons
 paths:
   /healthz:
     get:
@@ -178,7 +181,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebAuthnOptions'
+                $ref: '#/components/schemas/WebAuthnChallenge'
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -188,6 +191,11 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebAuthnLoginBegin'
   /auth/webauthn/login/finish:
     post:
       tags:
@@ -214,7 +222,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WebAuthnAssertion'
+              $ref: '#/components/schemas/WebAuthnLoginFinish'
   /auth/webauthn/register/begin:
     post:
       tags:
@@ -226,7 +234,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebAuthnOptions'
+                $ref: '#/components/schemas/WebAuthnChallenge'
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -243,6 +251,10 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Passkey'
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -256,7 +268,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WebAuthnAssertion'
+              $ref: '#/components/schemas/WebAuthnRegisterFinish'
   /auth/totp/enroll:
     post:
       tags:
@@ -309,8 +321,8 @@ paths:
       - auth
       summary: Fresh second-factor check opening a 5-minute step-up window
       responses:
-        '200':
-          description: OK
+        '204':
+          description: Step-up window opened
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -639,6 +651,152 @@ paths:
         in: query
         schema:
           type: string
+  /auth/stepup/begin:
+    post:
+      tags:
+      - auth
+      summary: 'Start a step-up: lists the usable methods and, for passkeys, the assertion options'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebAuthnChallenge'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /auth/factors:
+    get:
+      tags:
+      - auth
+      summary: Second-factor overview of the current user
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Factors'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /me/preferences:
+    get:
+      tags:
+      - me
+      summary: Interface preferences of the current user (defaults when never saved)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preferences'
+        '401':
+          $ref: '#/components/responses/Problem'
+    put:
+      tags:
+      - me
+      summary: Replace the preferences (validated; at most 128 KiB)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preferences'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Invalid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Preferences'
+  /metrics/catalog:
+    get:
+      tags:
+      - metrics
+      summary: Series, devices and provider health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricCatalog'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /metrics/snapshot:
+    get:
+      tags:
+      - metrics
+      summary: Latest value of every series
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSnapshot'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /metrics/history:
+    get:
+      tags:
+      - metrics
+      summary: History of series (ring buffer up to 1 h, minute rollups beyond)
+      parameters:
+      - name: series
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Comma separated keys or prefix.* patterns, at most 64
+      - name: range
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - 5m
+          - 1h
+          - 24h
+          - 7d
+          - 30d
+      - name: step
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Bucket size in seconds (default depends on the range)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricHistory'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /addons:
+    get:
+      operationId: listAddons
+      tags:
+      - addons
+      summary: List installed add-ons
+      responses:
+        '200':
+          description: Installed add-ons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddonList'
+        '401':
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     sessionCookie:
@@ -752,6 +910,8 @@ components:
             - password
             - passkey
             - totp
+            - recovery
+            - device
         trustedDevice:
           type: boolean
         remoteSession:
@@ -863,6 +1023,7 @@ components:
           - totp
           - recovery
           - webauthn
+          - password
         code:
           type: string
           maxLength: 32
@@ -872,6 +1033,13 @@ components:
         deviceLabel:
           type: string
           maxLength: 60
+        password:
+          type: string
+          description: Step-up only, and only for accounts with no second factor enrolled
+        credential:
+          type: object
+          additionalProperties: true
+          description: Browser PublicKeyCredential JSON (method webauthn)
     TotpConfirmRequest:
       type: object
       required:
@@ -1140,6 +1308,338 @@ components:
       type: object
       description: Browser PublicKeyCredential JSON (attestation or assertion)
       additionalProperties: true
+    WebAuthnChallenge:
+      type: object
+      required:
+      - challengeId
+      properties:
+        challengeId:
+          type: string
+          description: Opaque, single-use, expires in 5 minutes
+        methods:
+          type: array
+          items:
+            type: string
+        webauthn:
+          $ref: '#/components/schemas/WebAuthnOptions'
+          description: Present only when the user has a passkey
+        expiresAt:
+          type: string
+          format: date-time
+    Passkey:
+      type: object
+      required:
+      - id
+      - label
+      - createdAt
+      - flagged
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        flagged:
+          type: boolean
+          description: 'Signature-counter regression seen: this passkey is refused until removed'
+    Factors:
+      type: object
+      required:
+      - totp
+      - passkeys
+      - recoveryCodesLeft
+      - required
+      properties:
+        totp:
+          type: boolean
+        passkeys:
+          type: array
+          items:
+            $ref: '#/components/schemas/Passkey'
+        recoveryCodesLeft:
+          type: integer
+        required:
+          type: boolean
+          description: Policy demands a second factor for this user and origin
+    WebAuthnLoginBegin:
+      type: object
+      properties:
+        challengeId:
+          type: string
+          description: 'From the 202 login response: ask for options bound to that user. Omit for a usernameless passkey login.'
+    WebAuthnLoginFinish:
+      type: object
+      required:
+      - challengeId
+      - credential
+      properties:
+        challengeId:
+          type: string
+        trustDevice:
+          type: boolean
+        credential:
+          $ref: '#/components/schemas/WebAuthnAssertion'
+    WebAuthnRegisterFinish:
+      type: object
+      required:
+      - challengeId
+      - credential
+      properties:
+        challengeId:
+          type: string
+        label:
+          type: string
+        credential:
+          $ref: '#/components/schemas/WebAuthnAssertion'
+    Preferences:
+      type: object
+      required:
+      - theme
+      - language
+      - units
+      - temperature
+      - customThemes
+      - updatedAt
+      properties:
+        theme:
+          type: string
+          description: system | preset id | custom:<id>
+        language:
+          type: string
+          enum:
+          - en
+          - it
+        units:
+          type: string
+          enum:
+          - bytes
+          - bits
+          description: Network rates in bytes/s or bits/s
+        temperature:
+          type: string
+          enum:
+          - c
+          - f
+        customThemes:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        updatedAt:
+          type: integer
+          format: int64
+          description: Unix ms of the last save; 0 = nothing saved yet
+    MetricSeries:
+      type: object
+      required:
+      - key
+      - label
+      - unit
+      - group
+      - device
+      - stale
+      properties:
+        key:
+          type: string
+          example: cpu.0.util
+        label:
+          type: string
+        unit:
+          type: string
+          enum:
+          - percent
+          - celsius
+          - bytes
+          - bytes/s
+          - bit/s
+          - watt
+          - hertz
+          - count
+          - count/s
+          - load
+          - seconds
+        group:
+          type: string
+          enum:
+          - cpu
+          - mem
+          - net
+          - gpu
+          - disk
+          - sys
+        device:
+          type: string
+        stale:
+          type: boolean
+          description: No value for more than 5 seconds
+    MetricDevice:
+      type: object
+      required:
+      - kind
+      - id
+      - label
+      properties:
+        kind:
+          type: string
+          enum:
+          - cpu
+          - net
+          - gpu
+          - disk
+        id:
+          type: string
+        label:
+          type: string
+        hidden:
+          type: boolean
+          description: 'Virtual interface etc.: collected but not shown by default'
+        props:
+          type: object
+          additionalProperties: true
+    MetricProvider:
+      type: object
+      required:
+      - name
+      - ok
+      properties:
+        name:
+          type: string
+        ok:
+          type: boolean
+        reason:
+          type: string
+    MetricCatalog:
+      type: object
+      required:
+      - series
+      - devices
+      - providers
+      properties:
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricSeries'
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricDevice'
+        providers:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricProvider'
+    MetricSnapshot:
+      type: object
+      required:
+      - t
+      - values
+      - stale
+      properties:
+        t:
+          type: integer
+          format: int64
+        values:
+          type: object
+          additionalProperties:
+            type: number
+        stale:
+          type: array
+          items:
+            type: string
+    MetricHistory:
+      type: object
+      required:
+      - range
+      - stepSeconds
+      - series
+      properties:
+        range:
+          type: string
+          enum:
+          - 5m
+          - 1h
+          - 24h
+          - 7d
+          - 30d
+        stepSeconds:
+          type: number
+        series:
+          type: object
+          additionalProperties:
+            type: object
+            required:
+            - t
+            - v
+            properties:
+              t:
+                type: array
+                items:
+                  type: number
+              v:
+                type: array
+                items:
+                  type: number
+    Addon:
+      type: object
+      required:
+      - id
+      - name
+      - state
+      - embed
+      - sidebar
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        state:
+          type: string
+          enum:
+          - running
+          - stopped
+          - starting
+          - unhealthy
+          - unknown
+        embed:
+          type: string
+          enum:
+          - iframe
+          - link
+          - none
+        sidebar:
+          type: boolean
+        url:
+          type: string
+          description: Safe URL to open in a new tab (ADR-0018); absent when there is none or it is blocked
+        urlBlocked:
+          type: string
+          description: 'Why no safe link exists: same-host, no-port, no-alternate-address'
+    AddonList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Addon'
+        unavailable:
+          type: boolean
+          description: The container runtime could not be queried
   parameters:
     IdempotencyKey:
       name: Idempotency-Key

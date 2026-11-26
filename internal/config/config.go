@@ -436,7 +436,7 @@ func (c Config) Warnings() []string {
 	notEnforced("terminal.*", c.Terminal, d.Terminal, "Phase 3")
 	notEnforced("files.*", c.Files, d.Files, "Phase 4")
 	notEnforced("providers.*", c.Providers, d.Providers, "Phase 2/5")
-	notEnforced("addons.*", c.Addons, d.Addons, "Phase 7")
+	notEnforced("addons.*", c.Addons, d.Addons, "Phase 7; only addons.enabled and addons.baseDomain are used for the add-on list")
 	notEnforced("repopapers.*", c.RepoPapers, d.RepoPapers, "Phase 8")
 	if c.Auth.Mode == "pam" {
 		w = append(w, "auth.mode=pam is not implemented: native credentials are always used")

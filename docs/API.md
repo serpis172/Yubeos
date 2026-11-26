@@ -39,7 +39,8 @@ Common problem codes: `unauthenticated`(401), `forbidden`(403), `reauth-required
 | POST | `/auth/webauthn/login/begin` · `/finish` | passkey login (sole factor when `allowPasskeyAsSoleFactor`) or 2FA step |
 | POST | `/auth/logout` | |
 | GET | `/auth/me` | user, role, csrf token, factors, `remoteSession`, `trustedDevice` |
-| POST | `/auth/stepup` | password + second factor (or passkey) → 5-minute step-up window |
+| POST | `/auth/stepup/begin` · `/auth/stepup` | second factor (TOTP, recovery code or passkey; the password only for accounts with no second factor) → 5-minute step-up window |
+| GET | `/auth/factors` | TOTP state, passkeys, unused recovery codes, whether policy requires a second factor |
 | PUT | `/auth/password` | step-up; revokes other sessions and all trusted devices |
 | POST | `/auth/totp/enroll` · `/auth/totp/confirm` · DELETE `/auth/totp` | confirm returns recovery codes once; step-up |
 | POST | `/auth/webauthn/register/begin` · `/finish` · DELETE `/auth/webauthn/{id}` | passkeys; step-up |
@@ -58,7 +59,9 @@ Login responses never reveal whether a username exists. Problem codes added: `en
 | GET | `/metrics/catalog` | series metadata (unit, label, group), devices |
 | GET | `/metrics/snapshot` | latest value of every series |
 | GET | `/metrics/history?series=a,b&range=5m|1h|24h|7d|30d&step=` | ring (≤ 1 h) or rollups |
-| WS | `/ws/metrics?series=…` | frames `{t, v:{key:number}}`, `{dropped:n}` |
+| WS | `/ws/metrics?series=…` | first frame = snapshot, then one `{t, v:{key:number}}` per round; `{dropped:n}` when the client was too slow. `series` = comma list of keys or `prefix.*` (empty = all). Same-origin only; 8 connections per user |
+| GET | `/me/preferences` | the user's theme, language, units, custom themes (defaults, `updatedAt: 0`, when never saved) |
+| PUT | `/me/preferences` | replace them (validated, ≤ 128 KiB; 422 on invalid) |
 
 ### Storage
 | Method | Path | Notes |

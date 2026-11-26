@@ -14,7 +14,8 @@ Goal: a login system that is safe to expose to the internet, usable daily (passk
 | Lockout per account, IP bans (remote), uniform failures, fail2ban log line, audit hash chain | ✅ |
 | Origin classification, trusted proxies, `access.allowCidrs`, enrollment-only sessions | ✅ |
 | Credential epoch (reset/password change ends sessions within 60 s), role re-validation | ✅ |
-| TOTP, recovery codes, WebAuthn passkeys, trusted devices, step-up tickets, API tokens | ⏳ Phase 1c |
+| TOTP (RFC 6238, secrets sealed with AES-256-GCM in the helper, replay-proof), recovery codes, login challenge (single use, 5 min, 5 attempts, bound to the browser), enrolment-only → full session upgrade, step-up window (5 min) for TOTP removal and recovery-code regeneration | ✅ implemented, tested end to end |
+| WebAuthn passkeys, trusted devices ("remember this device"; the flag is accepted and ignored), API tokens, signed step-up tickets verified by the helper | ⏳ Phase 1c (rest) — passkey endpoints answer `501` |
 | Global login cool-down, built-in ACME, `lockdown`, `doctor --remote` | ⏳ Phase 1d |
 | Enrollment wizard, trusted-device UI, i18n, theme editor | ⏳ Phase 1e (a minimal login and setup page exist) |
 
@@ -49,7 +50,7 @@ Password change currently requires the **current password** as proof; the second
 |---|---|---|
 | Password verifier | helper store `/var/lib/yubeos-priv/credentials.db` (root, `0600`) | **Argon2id**, `m=64 MiB, t=3, p=2`, 16-byte random salt, 32-byte output; parameters calibrated at install to ≥ 250 ms on the host (never below m=19 MiB, t=2) and re-hashed on login when parameters change; optional server-side pepper in `/var/lib/yubeos-priv/pepper.key` |
 | TOTP secret | helper store | 160-bit secret, AES-256-GCM encrypted with `/var/lib/yubeos-priv/secret.key`; `lastUsedStep` stored for replay protection |
-| Passkey public keys | helper store | credential ID, COSE public key, signature counter, transports, AAGUID, backup flags, label |
+| Passkey public keys (not implemented yet) | helper store | credential ID, COSE public key, signature counter, transports, AAGUID, backup flags, label |
 | Recovery codes | helper store | 10 codes × 80 bit, shown once, stored as SHA-256, single use |
 | Sessions, trusted devices, throttling counters | daemon SQLite (`yubeos.db`) | hashed identifiers (SHA-256 of 256-bit random tokens) |
 

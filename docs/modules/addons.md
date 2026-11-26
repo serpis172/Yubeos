@@ -80,6 +80,15 @@ Rules for any proxied response: Yubeos cookies/headers are never forwarded upstr
 
 Privileged operations go through `yubeos-priv` (`compose.*`); `yubeosd` never reaches `docker.sock`. Defaults per container: `no-new-privileges`, `cap_drop: [ALL]` unless the manifest lists required caps, read-only root FS when the manifest says `readOnlyRootfs: true`, memory/CPU limits applied, no `--net=host`, no `--privileged`, no `docker.sock`. Anything beyond defaults is shown to the admin in the install dialog and recorded in the audit log.
 
+## 6b. Implemented so far: list and open
+
+The read-only slice ships before the lifecycle (install/update/rollback, ticketed proxy) of Phase 7:
+
+- `yubeos-priv` method `compose.list` (read-only) runs `docker ps` / `docker inspect` for containers labelled `dev.yubeos.managed=true` and groups them by `dev.yubeos.addon`. The daemon never touches `docker.sock`.
+- `GET /api/v1/addons` adds a safe URL per ADR-0018: `https://<id>.<addons.baseDomain>` when a base domain is configured, otherwise `http://<server LAN IP>:<published port>` — and only when that host differs from the one used to reach Yubeos (`urlBlocked: "same-host"` otherwise). `embed: none` gets no link.
+- The UI opens the URL with `target="_blank" rel="noopener noreferrer"`; no add-on HTML is served from Yubeos' origin. If Docker or the helper is unavailable the list is empty with `unavailable: true`.
+- `--demo` returns three mock add-ons.
+
 ## 7. Acceptance criteria (Phase 7)
 
 1. Install/stop/start/update/rollback/remove of two reference add-ons (one with UI proxy, one `link`) in VM tests; failure injection (bad image, port taken, unhealthy) leaves the system clean.

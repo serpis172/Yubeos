@@ -39,7 +39,10 @@ const sessionCookie = "__Host-yubeos_session"
 
 type routeOpt func(*routeOpts)
 
-type routeOpts struct{ allowEnrollment bool }
+type routeOpts struct{ allowEnrollment, stepUp bool }
+
+// stepUp requires a recent second-factor re-authentication (POST /auth/stepup) on the session.
+func stepUp() routeOpt { return func(o *routeOpts) { o.stepUp = true } }
 
 // allowEnrollment lets an enrollment-only session reach the route (me, logout, factor enrolment, password).
 func allowEnrollment() routeOpt { return func(o *routeOpts) { o.allowEnrollment = true } }
@@ -90,6 +93,10 @@ func (s *Server) require(min Role, h http.HandlerFunc, opts ...routeOpt) http.Ha
 		p := Principal{Username: a.Session.Username, Role: Role(a.Role), Session: &a.Session, EnrollmentOnly: a.Session.EnrollmentRequired}
 		if p.EnrollmentOnly && !ro.allowEnrollment {
 			problem.Write(w, r, http.StatusForbidden, "enrollment-required", "Second-factor enrollment required", "enrol a second factor before using the rest of Yubeos")
+			return
+		}
+		if ro.stepUp && !s.opts.Auth.HasStepUp(&a.Session) {
+			problem.Write(w, r, http.StatusForbidden, "step-up-required", "Confirm it is you", "re-authenticate with your second factor, then retry")
 			return
 		}
 		if min == RoleAdmin && p.Role != RoleAdmin {

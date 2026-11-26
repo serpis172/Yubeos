@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -83,8 +84,25 @@ func (s *statusRecorder) ReadFrom(r io.Reader) (int64, error) {
 	return n, err
 }
 
-// Unwrap lets http.ResponseController reach Flusher/Hijacker (needed for WebSockets later).
+// Unwrap lets http.ResponseController reach Flusher/Hijacker.
 func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
+
+// Hijack makes the recorder an http.Hijacker (the WebSocket library type-asserts the writer directly). The recorded
+// status becomes 101 so the access log shows the upgrade.
+func (s *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	c, rw, err := http.NewResponseController(s.ResponseWriter).Hijack()
+	if err == nil && s.status == 0 {
+		s.status = http.StatusSwitchingProtocols
+	}
+	return c, rw, err
+}
+
+// Flush forwards to the underlying writer when it supports flushing.
+func (s *statusRecorder) Flush() {
+	if f, ok := s.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
 
 func accessLog(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

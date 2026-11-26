@@ -7,7 +7,7 @@ server:
   exposure: lan                # lan | remote  (remote enforces extra rules: docs/REMOTE-ACCESS.md)
   allowedHosts: []             # hostnames/IPs you use to reach Yubeos; required when exposure=remote
   tls:
-    mode: selfsigned           # selfsigned | files   (acme is planned)
+    mode: selfsigned           # selfsigned | files | acme   (acme needs acmeDomains; see docs/REMOTE-ACCESS.md)
     # certFile: /etc/yubeos/tls/fullchain.pem
     # keyFile:  /etc/yubeos/tls/privkey.pem
 

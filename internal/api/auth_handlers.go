@@ -97,6 +97,18 @@ func (s *Server) writeAuthError(w http.ResponseWriter, r *http.Request, err erro
 		problem.Write(w, r, http.StatusForbidden, "ip-banned", "Address temporarily blocked", "too many failed attempts from this address")
 	case errors.Is(err, auth.ErrEnrollmentRequiredLocal):
 		problem.Write(w, r, http.StatusForbidden, "enrollment-required-local", "Second factor required", "enrol a second factor from a local network before signing in remotely")
+	case errors.Is(err, auth.ErrInvalidCode):
+		problem.Write(w, r, http.StatusUnauthorized, "invalid-code", "Invalid code", "check the code and try again")
+	case errors.Is(err, auth.ErrInvalidChallenge):
+		problem.Write(w, r, http.StatusUnauthorized, "challenge-invalid", "Sign-in step expired", "start the sign-in again")
+	case errors.Is(err, auth.ErrMethodNotAllowed):
+		problem.Write(w, r, http.StatusBadRequest, "method-not-allowed", "Method not available", "use one of the methods offered for this step")
+	case errors.Is(err, auth.ErrStepUpRequired):
+		problem.Write(w, r, http.StatusForbidden, "step-up-required", "Confirmation required", "confirm with a second factor, then retry")
+	case errors.Is(err, auth.ErrAlreadyEnrolled):
+		problem.Write(w, r, http.StatusConflict, "already-enrolled", "Already enabled", "remove the current authenticator first")
+	case errors.Is(err, auth.ErrNotEnrolled):
+		problem.Write(w, r, http.StatusConflict, "not-enrolled", "Not enabled", "enable an authenticator first")
 	case errors.Is(err, auth.ErrSecondFactorUnavailable):
 		problem.Write(w, r, http.StatusNotImplemented, "second-factor-unavailable", "Second factor not available in this build", "")
 	case errors.Is(err, auth.ErrPrivUnavailable):
@@ -137,6 +149,10 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	res, err := s.opts.Auth.Login(r.Context(), req.Username, req.Password, s.client(r))
 	if err != nil {
 		s.writeAuthError(w, r, err)
+		return
+	}
+	if res.Challenge != nil { // password accepted, second factor needed
+		writeJSON(w, http.StatusAccepted, map[string]any{"needs2fa": true, "methods": res.Challenge.Methods, "challengeId": res.Challenge.ID})
 		return
 	}
 	setSessionCookie(w, res.Token, res.Session.ExpiresAt)
@@ -208,6 +224,10 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
+	if p.Session == nil { // demo: no credentials exist, nothing to change
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	a := &auth.Authenticated{Session: *p.Session, Role: roleToIdentity(p.Role)}
 	if err := s.opts.Auth.ChangePassword(r.Context(), a, req.CurrentPassword, req.NewPassword, s.client(r)); err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
@@ -255,6 +275,10 @@ func (s *Server) listDevices(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) revokeDevice(w http.ResponseWriter, r *http.Request) {
 	p, _ := PrincipalFrom(r.Context())
+	if p.Session == nil { // demo: no sessions exist
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	id := r.PathValue("id")
 	ok, err := s.opts.Auth.Sessions.RevokeSID(r.Context(), p.Username, id) // scoped to the caller's own sessions
 	if err != nil {
@@ -273,6 +297,10 @@ func (s *Server) revokeDevice(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) revokeAll(w http.ResponseWriter, r *http.Request) {
 	p, _ := PrincipalFrom(r.Context())
+	if p.Session == nil { // demo: no sessions exist
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	if _, err := s.opts.Auth.Sessions.RevokeUser(r.Context(), p.Username, ""); err != nil {
 		problem.Internal(w, r)
 		return

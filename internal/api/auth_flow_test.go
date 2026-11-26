@@ -66,6 +66,7 @@ func newFlow(t *testing.T, require2fa string, mutate func(*config.Config, *netx.
 			"alice": {Username: "alice", UID: 1000, Role: identity.Admin},
 			"bob":   {Username: "bob", UID: 1001, Role: identity.User},
 		},
+		Factors:  auth.HelperFactors{Priv: privd.Direct{Server: srv, UID: 998}},
 		Sessions: auth.NewSessions(d, clk, auth.SessionConfig{IdleLocal: 30 * time.Minute, IdleRemote: 15 * time.Minute, MaxAge: 12 * time.Hour}),
 		Throttle: auth.NewThrottle(d, clk, auth.ThrottleConfig{}),
 		Audit:    audit.New(d, clk, quiet), Clock: clk, Log: quiet,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAddons } from "../addons/useAddons";
 import { useMe } from "../auth/useMe";
 import { ApiError, getSystemInfo, logout, setCsrfToken } from "../lib/api";
 import { LANGS, useLang, useT, type Key } from "../i18n";
@@ -29,6 +30,8 @@ export function Shell() {
   const me = useMe();
   const qc = useQueryClient();
   const t = useT();
+  const addons = useAddons();
+  const installed = (addons.data?.items ?? []).filter((a) => a.sidebar && a.url);
   const { choice, custom, setChoice } = useTheme();
   const [lang, setLang] = useLang();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -73,6 +76,16 @@ export function Shell() {
             ))}
           </div>
         ))}
+        {installed.length > 0 && (
+          <div className={styles.group}>
+            {installed.map((a) => (
+              <a key={a.id} className={styles.link} href={a.url} target="_blank" rel="noopener noreferrer">
+                <Icon name="puzzle" />
+                {a.name}
+              </a>
+            ))}
+          </div>
+        )}
       </nav>
       {menuOpen && <div className={styles.backdrop} onClick={() => setMenuOpen(false)} aria-hidden="true" />}
 

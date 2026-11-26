@@ -87,6 +87,7 @@ func run(args []string) int {
 
 	srv := privd.NewServer(log, allowed...)
 	privd.RegisterSystem(srv)
+	privd.RegisterCompose(srv) // read-only add-on discovery
 	credstore.Register(srv, store)
 
 	if err := os.MkdirAll(dirOf(*socket), 0o750); err != nil {

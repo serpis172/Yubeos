@@ -7,6 +7,8 @@ export type Factors = components["schemas"]["Factors"];
 export type Passkey = components["schemas"]["Passkey"];
 export type Device = components["schemas"]["Device"];
 export type RemoteStatus = components["schemas"]["RemoteStatus"];
+export type Addon = components["schemas"]["Addon"];
+export type AddonList = components["schemas"]["AddonList"];
 export type Preferences = components["schemas"]["Preferences"];
 export type MetricCatalog = components["schemas"]["MetricCatalog"];
 export type MetricSnapshot = components["schemas"]["MetricSnapshot"];
@@ -173,3 +175,5 @@ export const getMetricCatalog = (signal?: AbortSignal) => api<MetricCatalog>("/m
 export const getMetricSnapshot = (signal?: AbortSignal) => api<MetricSnapshot>("/metrics/snapshot", { signal });
 export const getMetricHistory = (series: string, range: "5m" | "1h" | "24h" | "7d" | "30d", signal?: AbortSignal) =>
   api<MetricHistory>(`/metrics/history?series=${encodeURIComponent(series)}&range=${range}`, { signal });
+
+export const getAddons = (signal?: AbortSignal) => api<AddonList>("/addons", { signal });

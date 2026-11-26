@@ -64,3 +64,37 @@ func TestAuditVerifyNeedsADatabase(t *testing.T) {
 		t.Fatal("usage error expected")
 	}
 }
+
+func TestLockdownCommand(t *testing.T) {
+	dir := t.TempDir()
+	st := func(want string) {
+		t.Helper()
+		if code, out, _ := runCtl("lockdown", "status", "--state-dir", dir); code != 0 || !strings.Contains(out, want) {
+			t.Fatalf("status want %q: %d %q", want, code, out)
+		}
+	}
+	st("off")
+	if code, out, _ := runCtl("lockdown", "on", "--state-dir", dir); code != 0 || !strings.Contains(out, "lockdown ON") {
+		t.Fatalf("on: %d %q", code, out)
+	}
+	st("ON")
+	if code, _, _ := runCtl("lockdown", "off", "--state-dir", dir); code != 0 {
+		t.Fatalf("off: %d", code)
+	}
+	st("off")
+	if code, _, _ := runCtl("lockdown", "off", "--state-dir", dir); code != 0 {
+		t.Fatalf("off twice must be fine: %d", code)
+	}
+	if code, _, errw := runCtl("lockdown", "sideways"); code != 2 || !strings.Contains(errw, "Usage") {
+		t.Fatalf("bad argument: %d %q", code, errw)
+	}
+}
+
+func TestDoctorRemoteFlagsAreAccepted(t *testing.T) {
+	sock := filepath.Join(t.TempDir(), "none.sock")
+	// no helper is running: doctor reports it and exits non-zero, but --remote must parse and add the remote section
+	_, out, _ := runCtl("doctor", "--remote", "--socket", sock, "--state-dir", t.TempDir())
+	if !strings.Contains(out, "allowedHosts") || !strings.Contains(out, "2FA policy") {
+		t.Fatalf("remote checks missing: %q", out)
+	}
+}

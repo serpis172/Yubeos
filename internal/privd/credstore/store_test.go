@@ -1,6 +1,7 @@
 package credstore
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"github.com/serpis172/Yubeos/internal/clock"
 	"github.com/serpis172/Yubeos/internal/priv"
 	"github.com/serpis172/Yubeos/internal/privd"
+	"github.com/serpis172/Yubeos/internal/totp"
 )
 
 var fast = Params{M: 1024, T: 1, P: 1} // test-only cost; production floor is MinParams
@@ -301,5 +303,49 @@ func TestOpenTightensPreExistingDirectory(t *testing.T) {
 	defer s.Close()
 	if st, _ := os.Stat(dir); st.Mode().Perm() != 0o700 {
 		t.Fatalf("state dir mode %o, want 700", st.Mode().Perm())
+	}
+}
+
+func TestTOTPSecretIsSealedAtRest(t *testing.T) {
+	s, _, _ := newStore(t)
+	ctx := context.Background()
+	secB32, err := s.TOTPBegin(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := totp.DecodeSecret(secB32)
+	var blob []byte
+	var enc int
+	if err := s.db.QueryRowContext(ctx, `SELECT secret, enc FROM totp WHERE username='alice'`).Scan(&blob, &enc); err != nil {
+		t.Fatal(err)
+	}
+	if enc != 1 || bytes.Contains(blob, raw) {
+		t.Fatalf("secret must not be stored in clear (enc=%d)", enc)
+	}
+	ok, _, err := s.TOTPConfirm(ctx, "alice", totp.Code(raw, totp.Step(s.clk.Now())))
+	if err != nil || !ok {
+		t.Fatalf("sealed secret must still verify: ok=%v err=%v", ok, err)
+	}
+	// a sealed blob copied to another account does not open (bound to the username)
+	if _, err := s.open(blob, "mallory"); err == nil {
+		t.Fatal("sealed blob must be bound to its account")
+	}
+}
+
+func TestLegacyPlainTOTPRowIsMigratedOnFirstUse(t *testing.T) {
+	s, _, _ := newStore(t)
+	ctx := context.Background()
+	raw := totp.NewSecret()
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO totp(username, secret, confirmed, last_step, created_at, enc) VALUES('bob',?,1,0,0,0)`, raw); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := s.TOTPVerify(ctx, "bob", totp.Code(raw, totp.Step(s.clk.Now())))
+	if err != nil || !ok {
+		t.Fatalf("legacy row must verify: ok=%v err=%v", ok, err)
+	}
+	var enc int
+	_ = s.db.QueryRowContext(ctx, `SELECT enc FROM totp WHERE username='bob'`).Scan(&enc)
+	if enc != 1 {
+		t.Fatal("legacy row must be re-encrypted after first use")
 	}
 }

@@ -48,6 +48,7 @@ type Session struct {
 	Factors            []string
 	EnrollmentRequired bool
 	CredEpoch          int64
+	ReauthUntil        time.Time // step-up window (zero = none); see docs/AUTHENTICATION.md §7
 	CreatedAt          time.Time
 	LastSeenAt         time.Time
 	ExpiresAt          time.Time
@@ -159,11 +160,12 @@ func (s *Sessions) Lookup(ctx context.Context, token string) (sess *Session, new
 		ip, ua       sql.NullString
 		curHash      []byte
 		prevUntil    sql.NullInt64
+		reauth       sql.NullInt64
 	)
 	row := s.db.QueryRowContext(ctx, `SELECT id_hash, sid, username, csrf, ip, user_agent, origin, factors, enrollment_required, cred_epoch,
-		created_at, rotated_at, last_seen_at, expires_at, prev_valid_until FROM sessions WHERE id_hash=? OR (prev_id_hash=? AND prev_valid_until>?)`,
+		created_at, rotated_at, last_seen_at, expires_at, prev_valid_until, reauth_until FROM sessions WHERE id_hash=? OR (prev_id_hash=? AND prev_valid_until>?)`,
 		h, h, now.UnixMilli())
-	if err := row.Scan(&curHash, &out.SID, &out.Username, &out.CSRF, &ip, &ua, &origin, &factors, &enr, &out.CredEpoch, &created, &rot, &seen, &exp, &prevUntil); err != nil {
+	if err := row.Scan(&curHash, &out.SID, &out.Username, &out.CSRF, &ip, &ua, &origin, &factors, &enr, &out.CredEpoch, &created, &rot, &seen, &exp, &prevUntil, &reauth); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, "", ErrNoSession
 		}
@@ -172,6 +174,9 @@ func (s *Sessions) Lookup(ctx context.Context, token string) (sess *Session, new
 	viaPrev = string(curHash) != string(h)
 	out.IP, out.UserAgent = ip.String, ua.String
 	out.Origin = netx.Origin(origin)
+	if reauth.Valid {
+		out.ReauthUntil = time.UnixMilli(reauth.Int64)
+	}
 	out.EnrollmentRequired = enr == 1
 	_ = json.Unmarshal([]byte(factors), &out.Factors)
 	out.CreatedAt, out.LastSeenAt, out.ExpiresAt = time.UnixMilli(created), time.UnixMilli(seen), time.UnixMilli(exp)
@@ -274,5 +279,18 @@ func (s *Sessions) Purge(ctx context.Context) error {
 		idle = s.cfg.IdleRemote
 	}
 	_, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE last_seen_at<?`, now.Add(-idle).UnixMilli())
+	return err
+}
+
+// OpenReauth opens (or extends) the step-up window of a session.
+func (s *Sessions) OpenReauth(ctx context.Context, sid string, until time.Time) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE sessions SET reauth_until=? WHERE sid=?`, until.UnixMilli(), sid)
+	return err
+}
+
+// CompleteEnrollment ends the enrollment-only state of a session after a second factor was confirmed.
+func (s *Sessions) CompleteEnrollment(ctx context.Context, sid string, factors []string) error {
+	f, _ := json.Marshal(factors)
+	_, err := s.db.ExecContext(ctx, `UPDATE sessions SET enrollment_required=0, factors=? WHERE sid=?`, string(f), sid)
 	return err
 }

@@ -6,6 +6,7 @@ import { SetupPage } from "../auth/SetupPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { AppearancePage } from "../pages/AppearancePage";
 import { PrefsProvider } from "../prefs/PrefsProvider";
+import { AddonsPage } from "../pages/AddonsPage";
 import { Placeholder } from "../pages/Placeholder";
 import { SecurityPage } from "../pages/SecurityPage";
 import { Shell } from "../shell/Shell";
@@ -27,7 +28,8 @@ export function App() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/settings/appearance" element={<AppearancePage />} />
                 <Route path="/settings/security" element={<SecurityPage />} />
-                {allNavItems.filter((i) => !["appearance", "security", "dashboard"].includes(i.id)).map((i) => <Route key={i.id} path={i.to} element={<Placeholder />} />)}
+                <Route path="/addons" element={<AddonsPage />} />
+                {allNavItems.filter((i) => !["appearance", "security", "dashboard", "addons"].includes(i.id)).map((i) => <Route key={i.id} path={i.to} element={<Placeholder />} />)}
                 <Route path="*" element={<Placeholder />} />
               </Route>
             </Route>

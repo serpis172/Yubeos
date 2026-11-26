@@ -32,6 +32,8 @@ User state per item: *saved*, *hidden*, *read* (stored per user in SQLite).
 
 (Papers With Code is intentionally not a source: the service was folded into Hugging Face; its data is reachable through HF.)
 
+**How Hugging Face is used (Phase 8).** The *Daily Papers* feed is read once per refresh (public JSON, no key, polite caching). Each entry is matched to the arXiv ID of the paper and contributes an **attention signal** — the number of community upvotes and comments over the window — that is blended into the paper score next to citation counts and venue tier; it never overrides the reliability tier (a trending preprint stays labelled T2). The same arXiv ID links a paper to the GitHub repositories that implement it, so *Repos* and *Papers* can cross-reference each other. The source is enabled by default (`repopapers.sources: [github, arxiv, semanticscholar, huggingface]`), individually disableable, and its failure only removes the attention signal. *Phase 8 starts with a spike that confirms the exact endpoint and fields before the client is written.*
+
 ## 3. Topics
 
 A **topic** is a saved query: `{id, name, githubTopics[], keywords[], languages[], arxivCategories[], minStars}`. Built-ins (editable, deletable): *AI/ML, LLM tooling, Self-hosting, Homelab/NAS, Rust, Go, DevOps, Security, Data engineering, Systems*. Matching for repos: any GitHub topic ∈ `githubTopics` OR keyword match in name/description/topics (case-insensitive, word-boundary). Matching for papers: arXiv category ∈ set OR keyword in title/abstract. Cheap deterministic matching — no ML dependency in 1.0.

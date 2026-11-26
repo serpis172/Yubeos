@@ -74,6 +74,7 @@ type Service struct {
 	clk      clock.Clock
 	log      *slog.Logger
 	factors  FactorStatus
+	ch       challenges
 
 	epochMu    sync.Mutex
 	epochCheck map[string]time.Time // sid → last epoch verification
@@ -154,9 +155,11 @@ func mapPrivErr(err error) error {
 
 // LoginResult is returned by a successful Login.
 type LoginResult struct {
-	Token   string // cookie value
+	Token   string // cookie value; empty when Challenge is set
 	Session Session
 	Role    identity.Role
+	// Challenge is set when the password was right but a second factor is still needed (HTTP 202).
+	Challenge *Challenge
 }
 
 // Login verifies the password through the helper and applies lockout, ban and second-factor policy.
@@ -206,15 +209,19 @@ func (s *Service) Login(ctx context.Context, username, password string, c Client
 
 	// Password is correct from here on.
 	_ = s.throttle.Success(ctx, user, c.IP)
-	need := NeedsSecondFactor(s.cfg.Require2FA, info.Role, c.Origin)
 	has, err := s.factors.Has2FA(ctx, user)
 	if err != nil {
 		return nil, err
 	}
+	// Policy decides who MUST have a second factor; anyone who enrolled one is always asked for it.
+	need := NeedsSecondFactor(s.cfg.Require2FA, info.Role, c.Origin) || has
 	enrollOnly := false
 	switch {
 	case need && has:
-		return nil, ErrSecondFactorUnavailable // completed in Phase 1c (TOTP/passkeys)
+		ch := s.newChallenge(&pending{kind: kindLogin, user: user, uid: info.UID, role: info.Role, epoch: v.Epoch, c: c,
+			methods: []string{"totp", "recovery"}})
+		s.auditEv(ctx, c, user, info.Role, "auth.login.2fa-required", "", audit.OK, nil)
+		return &LoginResult{Challenge: ch, Role: info.Role}, nil
 	case need && !has && c.Origin == netx.Remote:
 		s.auditEv(ctx, c, user, info.Role, "auth.login.denied", "", audit.Denied, map[string]any{"reason": "enrollment-required-local"})
 		return nil, ErrEnrollmentRequiredLocal

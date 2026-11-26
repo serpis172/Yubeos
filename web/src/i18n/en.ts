@@ -254,6 +254,20 @@ const en = {
   "color.warning": "Warning",
   "color.danger": "Danger",
   "color.info": "Info",
+  "addons.title": "Add-ons",
+  "addons.intro": "Applications installed on your home server. Click Open to use one in a new tab.",
+  "addons.loading": "Loading add-ons…",
+  "addons.loadFailed": "Could not load the add-ons.",
+  "addons.dockerDown": "The container runtime is not reachable; showing what is known.",
+  "addons.empty": "No add-ons installed yet.",
+  "addons.open": "Open",
+  "addons.blocked": "No safe link",
+  "addons.blockedHint": "Open Yubeos by a different host name, or set addons.baseDomain, to get a safe link.",
+  "addons.state.running": "Running",
+  "addons.state.stopped": "Stopped",
+  "addons.state.starting": "Starting",
+  "addons.state.unhealthy": "Unhealthy",
+  "addons.state.unknown": "Unknown",
 } as const;
 
 export default en;

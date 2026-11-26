@@ -48,12 +48,14 @@ type Options struct {
 
 // Store holds credentials.db, the pepper and the active Argon2id parameters.
 type Store struct {
-	db     *db.DB
-	clk    clock.Clock
-	log    *slog.Logger
-	pepper []byte
-	params Params
-	dummy  string
+	db          *db.DB
+	clk         clock.Clock
+	log         *slog.Logger
+	pepper      []byte
+	secretKey   []byte // AES-256 key sealing TOTP secrets (secret.key, 0600)
+	factorFails map[string][]time.Time
+	params      Params
+	dummy       string
 
 	mu         sync.Mutex
 	consumeErr []time.Time // recent failed setup-token attempts (global limiter)
@@ -81,11 +83,15 @@ func Open(ctx context.Context, dir string, o Options) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	secretKey, err := loadOrCreatePepper(filepath.Join(dir, "secret.key"))
+	if err != nil {
+		return nil, err
+	}
 	d, err := db.Open(ctx, filepath.Join(dir, "credentials.db"), Migrations(), o.Log)
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{db: d, clk: o.Clock, log: o.Log, pepper: pepper}
+	s := &Store{db: d, clk: o.Clock, log: o.Log, pepper: pepper, secretKey: secretKey[:32], factorFails: map[string][]time.Time{}}
 	switch {
 	case o.Params != nil:
 		s.params = *o.Params

@@ -196,11 +196,19 @@ func TestCatalogVerifyDefaultsToTrue(t *testing.T) {
 	}
 }
 
-func TestACMEIsRejectedUntilImplemented(t *testing.T) {
+func TestACMEValidation(t *testing.T) {
 	c := Default()
 	c.Server.TLS.Mode = "acme"
-	if err := c.Validate(); err == nil || !strings.Contains(err.Error(), "not implemented") {
-		t.Fatalf("acme must be rejected, got %v", err)
+	if err := c.Validate(); err == nil {
+		t.Fatalf("acme without domains must be rejected")
+	}
+	c.Server.TLS.ACMEDomains = []string{"nas.example.org"}
+	if err := c.Validate(); err != nil {
+		t.Fatalf("acme with domains must be accepted, got %v", err)
+	}
+	c.Server.BehindProxy, c.Server.TrustedProxies = true, []string{"127.0.0.1"}
+	if err := c.Validate(); err == nil {
+		t.Fatalf("acme behind a proxy must be rejected")
 	}
 }
 

@@ -256,6 +256,20 @@ const it: Dict = {
   "color.warning": "Avviso",
   "color.danger": "Pericolo",
   "color.info": "Informazione",
+  "addons.title": "Add-on",
+  "addons.intro": "Applicazioni installate sul tuo home server. Clicca Apri per usarle in una nuova scheda.",
+  "addons.loading": "Caricamento add-on…",
+  "addons.loadFailed": "Impossibile caricare gli add-on.",
+  "addons.dockerDown": "Il runtime dei container non è raggiungibile; mostro quanto noto.",
+  "addons.empty": "Nessun add-on installato.",
+  "addons.open": "Apri",
+  "addons.blocked": "Nessun link sicuro",
+  "addons.blockedHint": "Apri Yubeos con un altro nome host, o imposta addons.baseDomain, per ottenere un link sicuro.",
+  "addons.state.running": "In esecuzione",
+  "addons.state.stopped": "Fermato",
+  "addons.state.starting": "Avvio",
+  "addons.state.unhealthy": "Non integro",
+  "addons.state.unknown": "Sconosciuto",
 };
 
 export default it;

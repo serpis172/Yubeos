@@ -70,3 +70,9 @@ Loading skeleton · Live · Reconnecting (frozen charts + banner) · Provider un
 3. 30 min soak with 3 tabs open: daemon CPU < 1 %, RSS growth < 5 MB.
 4. Unplugging a NIC / killing `nvidia-smi` degrades one card only, with recovery without restart.
 5. Multi-socket and no-GPU / no-RAPL hosts covered by fixtures.
+
+## Implementation notes (backend)
+
+- Source: `/proc` and `/sys` as the unprivileged daemon (`internal/metrics/proc.go`): CPU total/per-thread, memory (+ZFS ARC), network, block devices, load, uptime. Temperatures, GPU and power need extra providers and are not collected yet.
+- History: one-hour in-memory ring (1 s resolution); per-minute rollups in `metrics_rollup` (30 days) for 24h/7d/30d, never finer than 60 s.
+- Live: `GET /ws/metrics` pushes `{t,v}` once per second; the UI falls back to polling `/metrics/snapshot` when the socket fails.

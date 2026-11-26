@@ -46,7 +46,7 @@ Priority = (Impact + Risk) × (6 − Effort)         each 1–5; higher priority
 | TD-012 | Infrastructure | GitHub Actions pinned by tag, not SHA (could not resolve SHAs from the build sandbox) | 3 | 2 | 1 | 25 | Run `scripts/pin-actions.sh` once with network; Dependabot keeps SHAs fresh |
 | TD-013 | Architecture | Built-in ACME not implemented: `tls.mode=acme` is rejected by config validation | 3 | 3 | 3 | 18 | Phase 1d (spike S-5) |
 | TD-014 | Security | `yubeos-priv.service` has no `SystemCallFilter` yet | 3 | 2 | 3 | 15 | Validate with `systemd-run` terminals (S-3), then enable in P9 hardening |
-| TD-015 | Dependency | `go.mod` declares `go 1.22` (minimum language level; CI builds with 1.24). Go 1.22 itself is end-of-life | 2 | 2 | 1 | 20 | Raise to the then-current stable on the first networked build; must keep `go vet`/tests green |
+| TD-015 | Dependency | `go.mod` declares `go 1.26.0`; CI now reads the version from `go.mod` (it used 1.24 and only worked through toolchain auto-download). README states the same minimum | 2 | 2 | 1 | 20 | Raise to the then-current stable on the first networked build; must keep `go vet`/tests green |
 | TD-016 | UX | No i18n yet (en/it planned Phase 1e), no login UI, no command palette | 3 | 1 | 3 | 12 | Phase 1e |
 | TD-017 | Security | Password denylist is a ~50-entry starter list, not the 10 000 most common passwords | 2 | 2 | 2 | 16 | Embed a vetted list (licence-checked) in Phase 1c |
 | TD-018 | Security | Global login cool-down (≥ 100 failures / 10 min across all IPs) not implemented | 3 | 2 | 2 | 20 | Phase 1d |

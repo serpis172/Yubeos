@@ -19,9 +19,9 @@ In all cases Yubeos' own login protections apply; options A/B/C only change who 
 | Mode | Meaning | Rules |
 |---|---|---|
 | `lan` (default) | Intended for LAN/VPN. Remote-origin logins are still treated more strictly (§4). | Self-signed TLS allowed; PAM mode allowed; `require2fa` may be `admins` |
-| `remote` | Reachable from the internet (options B or C). | **Enforced at startup — yubeosd refuses to start otherwise:** `allowedHosts` set (your public hostname) · trusted certificate (`tls.mode: files`; `acme` once implemented) **or** `behindProxy: true` with `trustedProxies` · `auth.mode: native` · `auth.require2fa: all` · `allowRoot: false` |
+| `remote` | Reachable from the internet (options B or C). | **Enforced at startup — yubeosd refuses to start otherwise:** `allowedHosts` set (your public hostname) · trusted certificate (`tls.mode: files` or `acme`) **or** `behindProxy: true` with `trustedProxies` · `auth.mode: native` · `auth.require2fa: all` · `allowRoot: false` |
 
-Example (direct, option C) — **until built-in ACME ships (Phase 1d) obtain the certificate with certbot/Caddy/`tailscale cert` and point Yubeos at the files** (reloaded every 6 h and on `SIGHUP`):
+Example (direct, option C) — built-in ACME (`tls.mode: acme`) obtains and renews Let's Encrypt certificates itself (TLS-ALPN-01 on port 443, HTTP-01 on the redirect listener on port 80). Alternatively obtain the certificate with certbot/Caddy/`tailscale cert` and use `tls.mode: files` (reloaded every 6 h and on `SIGHUP`):
 
 ```json
 {

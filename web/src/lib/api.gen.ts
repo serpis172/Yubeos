@@ -1326,7 +1326,7 @@ export interface paths {
                     };
                 };
                 401: components["responses"]["Problem"];
-                422: components["responses"]["Problem"];
+                422: components["responses"]["Invalid"];
             };
         };
         post?: never;
@@ -1446,6 +1446,23 @@ export interface paths {
                 401: components["responses"]["Problem"];
             };
         };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/addons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List installed add-ons */
+        get: operations["listAddons"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1647,7 +1664,8 @@ export interface components {
             /** @description Opaque, single-use, expires in 5 minutes */
             challengeId: string;
             methods?: string[];
-            webauthn: components["schemas"]["WebAuthnOptions"];
+            /** @description Present only when the user has a passkey */
+            webauthn?: components["schemas"]["WebAuthnOptions"];
             /** Format: date-time */
             expiresAt?: string;
         };
@@ -1755,6 +1773,28 @@ export interface components {
                 };
             };
         };
+        Addon: {
+            id: string;
+            name: string;
+            version?: string;
+            description?: string;
+            icon?: string;
+            categories?: string[];
+            /** @enum {string} */
+            state: "running" | "stopped" | "starting" | "unhealthy" | "unknown";
+            /** @enum {string} */
+            embed: "iframe" | "link" | "none";
+            sidebar: boolean;
+            /** @description Safe URL to open in a new tab (ADR-0018); absent when there is none or it is blocked */
+            url?: string;
+            /** @description Why no safe link exists: same-host, no-port, no-alternate-address */
+            urlBlocked?: string;
+        };
+        AddonList: {
+            items: components["schemas"]["Addon"][];
+            /** @description The container runtime could not be queried */
+            unavailable?: boolean;
+        };
     };
     responses: {
         /** @description RFC 9457 problem details */
@@ -1803,4 +1843,26 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    listAddons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Installed add-ons */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddonList"];
+                };
+            };
+            401: components["responses"]["Problem"];
+        };
+    };
+}

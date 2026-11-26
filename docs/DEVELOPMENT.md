@@ -53,7 +53,7 @@ Commit both files. After that `make lint test` and `make e2e` are the full local
 **Go:** `gofmt`/`goimports`, `internal/` layering (modules must not import each other — only `events`, `jobs`, `priv`, `db`, `audit`); errors wrapped with `%w`; `context.Context` first param; no globals except `slog`; tables-driven tests; `-race` always; interfaces defined where *consumed*; no `init()` side effects.
 **TypeScript:** strict mode, no `any` (lint error), feature folders, hooks per query, components < 200 lines, no default exports except routes.
 **Commits/PRs:** Conventional Commits; PR template asks for contract changes, security impact, test evidence, screenshots (demo mode, light+dark).
-**Docs:** any user-visible change updates the relevant doc in the same PR; ADR for decisions that are expensive to reverse (template in [adr/README](adr/README.md)).
+**Docs:** any user-visible change updates the relevant doc in the same PR, **including the [tutorial](tutorial/README.md)** (flip a feature badge from 🟦 to ✅ when its phase ships and retake affected screenshots in demo mode, see [tutorial/img](tutorial/img/README.md)); ADR for decisions that are expensive to reverse (template in [adr/README](adr/README.md)).
 **Dependencies:** [ADR-0013](adr/0013-dependency-policy.md).
 
 ## 6. Adding a feature (the vertical-slice checklist)

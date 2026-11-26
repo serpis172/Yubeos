@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/serpis172/Yubeos/internal/addons"
 	"github.com/serpis172/Yubeos/internal/api"
 	"github.com/serpis172/Yubeos/internal/audit"
 	"github.com/serpis172/Yubeos/internal/auth"
@@ -24,6 +25,7 @@ import (
 	"github.com/serpis172/Yubeos/internal/config"
 	"github.com/serpis172/Yubeos/internal/db"
 	"github.com/serpis172/Yubeos/internal/identity"
+	"github.com/serpis172/Yubeos/internal/metrics"
 	"github.com/serpis172/Yubeos/internal/netx"
 	"github.com/serpis172/Yubeos/internal/priv"
 	"github.com/serpis172/Yubeos/internal/tlsutil"
@@ -133,7 +135,24 @@ func run(args []string, environ []string) int {
 		go purgeLoop(ctx, authSvc, log)
 	}
 
-	handler := api.New(api.Options{Config: cfg, Log: log, Clock: clock.Real{}, Demo: *demo, UI: web.FS(), Auth: authSvc, Net: cls})
+	var (
+		hub      *metrics.Hub
+		addonSvc addons.Service
+		prefs    api.PrefsStore // nil in demo: in-memory
+	)
+	if *demo {
+		hub = metrics.NewHub(metrics.NewDemo(time.Now().UnixNano()))
+		addonSvc = addons.Demo{}
+	} else {
+		hub = metrics.NewHub(metrics.NewProc())
+		hub.SetStore(metrics.SQLRollups{DB: database.DB})
+		addonSvc = addons.Priv{Caller: priv.NewClient(*privSocket)}
+		prefs = api.SQLPrefs{DB: database.DB}
+	}
+	go hub.Run(ctx)
+
+	handler := api.New(api.Options{Config: cfg, Log: log, Clock: clock.Real{}, Demo: *demo, UI: web.FS(), Auth: authSvc, Net: cls,
+		Metrics: hub, Addons: addonSvc, Prefs: prefs})
 	srv := &http.Server{
 		Addr:              cfg.Server.Listen,
 		Handler:           handler,
